@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Knowledge Pro | AI Chat</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            bg: '#131314',
+                            surface: '#1e1f20',
+                            input: '#282a2c'
+                        }
+                    },
+                    animation: {
+                        'blink': 'blink 1s step-end infinite',
+                        'fade-in': 'fadeIn 0.3s ease-out'
+                    },
+                    keyframes: {
+                        blink: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0' } },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .scrollbar-hide::-webkit-scrollbar { display: none; }
+            .markdown-body p { @apply mb-2; }
+            .markdown-body pre { @apply bg-gray-100 dark:bg-black p-3 rounded-lg overflow-x-auto my-2 text-sm; }
+            .markdown-body code { @apply font-mono text-pink-600 dark:text-pink-400; }
+            .markdown-body ul { @apply list-disc list-inside mb-2; }
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-white dark:bg-dark-bg text-gray-900 dark:text-gray-100 transition-colors duration-200 h-[100dvh] flex flex-col overflow-hidden">
+
+    <div id="loading-screen" class="fixed inset-0 z-[100] bg-white dark:bg-dark-bg flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mb-4"></div>
+        <h2 class="text-xl font-semibold animate-pulse">Knowledge Pro</h2>
+        <p class="text-sm text-gray-500 mt-2">Connecting to System...</p>
+    </div>
+
+    <div id="auth-screen" class="hidden fixed inset-0 z-[80] bg-white dark:bg-dark-bg flex items-center justify-center p-4">
+        <div class="max-w-sm w-full space-y-6">
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-brand-600">Knowledge Pro</h1>
+                <p class="text-gray-500 mt-2">Sign in to continue</p>
+            </div>
+            
+            <div class="bg-gray-50 dark:bg-dark-surface p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" id="auth-email" class="w-full p-3 bg-white dark:bg-dark-input border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Password</label>
+                        <input type="password" id="auth-password" class="w-full p-3 bg-white dark:bg-dark-input border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <p id="auth-error" class="text-red-500 text-sm hidden"></p>
+                    
+                    <button onclick="handleLogin()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-3 rounded-lg transition">Log In</button>
+                    <button onclick="handleRegister()" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium py-3 rounded-lg transition">Create Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden flex h-full w-full">
+        
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-gray-50 dark:bg-dark-surface transform -translate-x-full md:translate-x-0 transition-transform duration-300 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+            <div class="p-4 flex items-center justify-between">
+                <div onclick="toggleMobileSidebar()" class="md:hidden cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fas fa-times text-xl"></i>
+                </div>
+                <button onclick="createNewChat()" class="flex-1 md:ml-0 ml-4 flex items-center gap-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2.5 rounded-full text-sm font-medium transition">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-2 space-y-1" id="chat-history-list">
+                </div>
+
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-lg transition" onclick="openSettings()">
+                    <div class="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold" id="user-avatar">U</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate flex items-center gap-1">
+                            <span id="user-name-display">User</span>
+                            <i id="admin-badge" class="hidden fas fa-certificate text-blue-500 text-xs" title="Admin"></i>
+                        </p>
+                        <p class="text-xs text-gray-500 truncate" id="user-email-display">email@example.com</p>
+                    </div>
+                    <i class="fas fa-cog text-gray-400"></i>
+                </div>
+            </div>
+        </aside>
+
+        <div id="sidebar-overlay" onclick="toggleMobileSidebar()" class="fixed inset-0 z-30 bg-black/50 hidden md:hidden fade-in"></div>
+
+        <main class="flex-1 flex flex-col h-full relative md:ml-72 bg-white dark:bg-dark-bg">
+            
+            <header class="h-14 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleMobileSidebar()" class="md:hidden text-gray-500">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <span id="current-model-display" class="text-sm font-medium text-gray-500 flex items-center gap-1">
+                        Knowledge Pro <span class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">v1.0</span>
+                    </span>
+                </div>
+                <div>
+                     <button onclick="toggleDarkMode()" class="text-gray-400 hover:text-brand-500 transition">
+                        <i class="fas fa-moon" id="theme-icon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide pb-32">
+                <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center p-6 opacity-60">
+                    <i class="fas fa-brain text-6xl text-brand-200 mb-6"></i>
+                    <h2 class="text-2xl font-semibold mb-2">How can I help you today?</h2>
+                    <p class="text-sm text-gray-500 max-w-md">I am trained on custom data. Ask me anything about the system or configured topics.</p>
+                </div>
+            </div>
+
+            <div class="absolute bottom-0 left-0 right-0 bg-white dark:bg-dark-bg p-4 pt-2">
+                <div class="max-w-3xl mx-auto relative">
+                    <div id="ai-typing-indicator" class="hidden absolute -top-8 left-0 text-xs text-gray-400 flex items-center gap-1">
+                        <span class="animate-bounce">●</span>
+                        <span class="animate-bounce delay-100">●</span>
+                        <span class="animate-bounce delay-200">●</span>
+                        Generating response...
+                    </div>
+
+                    <div class="relative bg-gray-100 dark:bg-dark-input rounded-[24px] border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-colors">
+                        <textarea 
+                            id="message-input" 
+                            rows="1" 
+                            class="w-full bg-transparent p-4 pr-12 max-h-32 resize-none outline-none text-sm" 
+                            placeholder="Message Knowledge Pro..."
+                            oninput="adjustHeight(this)"
+                            onkeydown="handleEnter(event)"
+                        ></textarea>
+                        <button onclick="sendMessage()" class="absolute right-2 bottom-2 p-2 bg-brand-600 text-white rounded-full h-8 w-8 flex items-center justify-center hover:bg-brand-700 transition disabled:opacity-50" id="send-btn">
+                            <i class="fas fa-arrow-up text-xs"></i>
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-center text-gray-400 mt-2">
+                        AI can make mistakes. Check important info.
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="settings-modal" class="hidden fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-dark-surface w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+            
+            <div class="w-full md:w-64 bg-gray-50 dark:bg-[#18181b] p-4 flex flex-col gap-2 border-r border-gray-200 dark:border-gray-700">
+                <h3 class="font-bold mb-4 px-2">Settings</h3>
+                <button onclick="switchTab('profile')" class="tab-btn text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active-tab" data-tab="profile"><i class="fas fa-user mr-2"></i> Profile</button>
+                
+                <div id="admin-tabs" class="hidden flex flex-col gap-2 mt-2 border-t border-gray-200 dark:border-gray-700 pt-2">
+                    <span class="text-xs text-gray-500 uppercase px-2 mt-2 font-bold">Admin Panel</span>
+                    <button onclick="switchTab('models')" class="tab-btn text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-tab="models"><i class="fas fa-robot mr-2"></i> Models</button>
+                    <button onclick="switchTab('training')" class="tab-btn text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-tab="training"><i class="fas fa-graduation-cap mr-2"></i> Training</button>
+                    <button onclick="switchTab('users')" class="tab-btn text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-tab="users"><i class="fas fa-users mr-2"></i> Users & History</button>
+                </div>
+
+                <div class="flex-1"></div>
+                <button onclick="logout()" class="text-left p-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="fas fa-sign-out-alt mr-2"></i> Sign Out</button>
+                <button onclick="closeSettings()" class="md:hidden mt-2 p-2 border border-gray-300 rounded text-center">Close</button>
+            </div>
+
+            <div class="flex-1 p-6 overflow-y-auto bg-white dark:bg-dark-surface relative">
+                <button onclick="closeSettings()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
+
+                <div id="tab-profile" class="tab-content block">
+                    <h2 class="text-xl font-bold mb-4">User Profile</h2>
+                    <div class="p-4 border rounded-lg dark:border-gray-700">
+                        <p class="text-sm text-gray-500">Email</p>
+                        <p class="font-mono text-lg" id="profile-email">...</p>
+                        <div class="mt-4 flex gap-2">
+                             <button onclick="clearChatHistory()" class="bg-red-100 text-red-600 px-3 py-1 rounded text-sm hover:bg-red-200">Delete My Chat History</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-models" class="tab-content hidden">
+                    <h2 class="text-xl font-bold mb-4">Manage Models</h2>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="new-model-name" placeholder="Model Name (e.g. Gemini Pro)" class="border p-2 rounded text-sm flex-1 dark:bg-dark-input dark:border-gray-600">
+                        <input type="text" id="new-model-ver" placeholder="Version (e.g. v2)" class="border p-2 rounded text-sm w-24 dark:bg-dark-input dark:border-gray-600">
+                        <button onclick="addModel()" class="bg-brand-600 text-white px-4 rounded text-sm">Add</button>
+                    </div>
+                    <div id="models-list" class="space-y-2"></div>
+                </div>
+
+                <div id="tab-training" class="tab-content hidden">
+                    <h2 class="text-xl font-bold mb-4">AI Training Data</h2>
+                    <p class="text-xs text-gray-500 mb-2">The system uses Fuzzy Matching to find the best answer.</p>
+                    <div class="bg-gray-50 dark:bg-dark-input p-4 rounded-lg mb-4 space-y-3">
+                        <input type="text" id="train-prompt" placeholder="User Query / Keyword" class="w-full p-2 border rounded dark:bg-dark-bg dark:border-gray-600">
+                        <textarea id="train-response" rows="3" placeholder="AI Response (Markdown supported)" class="w-full p-2 border rounded dark:bg-dark-bg dark:border-gray-600"></textarea>
+                        <select id="train-model-select" class="w-full p-2 border rounded dark:bg-dark-bg dark:border-gray-600"></select>
+                        <button onclick="addTrainingData()" class="w-full bg-green-600 text-white py-2 rounded">Save Knowledge</button>
+                    </div>
+                </div>
+
+                <div id="tab-users" class="tab-content hidden">
+                    <h2 class="text-xl font-bold mb-4">User Management</h2>
+                    <div id="users-list" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="banned-screen" class="hidden fixed inset-0 z-[200] bg-red-50 dark:bg-red-900/20 flex flex-col items-center justify-center text-center p-6">
+        <i class="fas fa-ban text-6xl text-red-500 mb-4"></i>
+        <h1 class="text-3xl font-bold text-red-600 mb-2">Account Suspended</h1>
+        <p class="text-gray-600 dark:text-gray-300">You have been banned by an administrator.</p>
+        <button onclick="logout()" class="mt-6 px-6 py-2 bg-gray-800 text-white rounded hover:bg-gray-900">Sign Out</button>
+    </div>
+
+    <script>
+        // --- 1. FIREBASE CONFIGURATION (Integrated) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBD473HnZjcmuBlEwd7uaI0MB-hKU4_Nfs",
+            authDomain: "knowledge-pro-c9ee5.firebaseapp.com",
+            databaseURL: "https://knowledge-pro-c9ee5-default-rtdb.firebaseio.com",
+            projectId: "knowledge-pro-c9ee5",
+            storageBucket: "knowledge-pro-c9ee5.firebasestorage.app",
+            messagingSenderId: "14035001235",
+            appId: "1:14035001235:web:cb7c8a0d7c0ce48d729266",
+            measurementId: "G-ZXZC2BH72M"
+        };
+
+        // --- 2. STATE & UTILS ---
+        const state = {
+            user: null,
+            userData: null,
+            chats: {},
+            currentChatId: null,
+            models: [],
+            trainingData: []
+        };
+
+        const el = (id) => document.getElementById(id);
+        const show = (id) => el(id)?.classList.remove('hidden');
+        const hide = (id) => el(id)?.classList.add('hidden');
+        
+        // --- 3. INIT LOGIC ---
+        function initApp() {
+            // Initialize Firebase directly
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                // Initialize Analytics (optional but included as per request)
+                if(firebase.analytics) {
+                    firebase.analytics();
+                }
+            }
+            
+            // Auth Listener
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    state.user = user;
+                    loadUserData(user.uid);
+                } else {
+                    state.user = null;
+                    hide('loading-screen');
+                    hide('app-container');
+                    show('auth-screen');
+                }
+            });
+        }
+
+        // --- 4. USER & DATA LOGIC ---
+        async function loadUserData(uid) {
+            const db = firebase.database();
+            
+            // Listen to User Profile
+            db.ref(`users/${uid}`).on('value', snapshot => {
+                const data = snapshot.val();
+                if (!data) {
+                    // Create default user entry if missing
+                    db.ref(`users/${uid}`).set({
+                        email: state.user.email,
+                        role: 'user',
+                        isBanned: false,
+                        history: []
+                    });
+                } else {
+                    state.userData = data;
+                    if (data.isBanned) {
+                        show('banned-screen');
+                        return;
+                    }
+                    if (data.role === 'admin') {
+                        el('admin-badge').classList.remove('hidden');
+                        el('admin-tabs').classList.remove('hidden');
+                    } else {
+                        el('admin-badge').classList.add('hidden');
+                        el('admin-tabs').classList.add('hidden');
+                    }
+                    
+                    // Proceed to Load Chats
+                    loadChats(uid);
+                }
+                
+                el('user-name-display').innerText = data?.email.split('@')[0] || 'User';
+                el('user-email-display').innerText = data?.email || state.user.email;
+                el('profile-email').innerText = data?.email || state.user.email;
+
+                // Move to App Screen if fully loaded
+                hide('auth-screen');
+                hide('loading-screen');
+                show('app-container');
+                
+                // If admin, load training data + models
+                if (data?.role === 'admin') {
+                    loadAdminData();
+                }
+            });
+        }
+
+        function loadChats(uid) {
+            const db = firebase.database();
+            db.ref(`chats/${uid}`).on('value', snapshot => {
+                const list = el('chat-history-list');
+                list.innerHTML = '';
+                const chats = snapshot.val() || {};
+                
+                Object.keys(chats).forEach(id => {
+                    const chat = chats[id];
+                    if (chat.deleted) return;
+                    
+                    const btn = document.createElement('button');
+                    btn.className = `w-full text-left px-4 py-2 text-sm rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 truncate ${state.currentChatId === id ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300' : 'text-gray-700 dark:text-gray-300'}`;
+                    btn.innerHTML = `<i class="far fa-comment-alt mr-2"></i> ${chat.title || 'New Chat'}`;
+                    btn.onclick = () => openChat(id);
+                    list.appendChild(btn);
+                });
+            });
+        }
+
+        // --- 5. CHAT FUNCTIONALITY ---
+        function createNewChat() {
+            const db = firebase.database();
+            const chatId = db.ref().child('chats').push().key;
+            db.ref(`chats/${state.user.uid}/${chatId}`).set({
+                title: 'New Chat',
+                created: Date.now(),
+                deleted: false,
+                messages: []
+            });
+            openChat(chatId);
+            if (window.innerWidth < 768) toggleMobileSidebar();
+        }
+
+        function openChat(chatId) {
+            state.currentChatId = chatId;
+            el('messages-container').innerHTML = ''; // Clear UI
+            hide('welcome-screen');
+            
+            // Re-render UI History
+            loadChats(state.user.uid);
+
+            const db = firebase.database();
+            db.ref(`chats/${state.user.uid}/${chatId}/messages`).on('value', snapshot => {
+                const msgs = snapshot.val() || [];
+                const container = el('messages-container');
+                container.innerHTML = ''; // Full redraw for simplicity
+                
+                if (msgs.length === 0) {
+                    container.innerHTML = `<div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center p-6 opacity-60">
+                        <i class="fas fa-brain text-6xl text-brand-200 mb-6"></i>
+                        <h2 class="text-2xl font-semibold mb-2">Ready to assist.</h2></div>`;
+                } else {
+                    msgs.forEach(m => {
+                        appendMessageToUI(m.role, m.content, false);
+                    });
+                }
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        async function sendMessage() {
+            const input = el('message-input');
+            const text = input.value.trim();
+            if (!text || !state.currentChatId) return;
+
+            input.value = '';
+            input.style.height = 'auto'; // Reset height
+            
+            const db = firebase.database();
+            const chatRef = db.ref(`chats/${state.user.uid}/${state.currentChatId}`);
+            
+            // 1. Get current messages count to index new ones
+            const snapshot = await chatRef.child('messages').get();
+            const msgs = snapshot.val() || [];
+            const newIndex = msgs.length;
+
+            // 2. Add User Message
+            await chatRef.child(`messages/${newIndex}`).set({
+                role: 'user',
+                content: text,
+                timestamp: Date.now()
+            });
+
+            // Update title if first message
+            if (newIndex === 0) {
+                chatRef.update({ title: text.substring(0, 30) + '...' });
+            }
+
+            // 3. AI Processing (Simulate streaming)
+            show('ai-typing-indicator');
+            const response = await generateAIResponse(text);
+            
+            // Simulate Streaming Delay
+            setTimeout(async () => {
+                hide('ai-typing-indicator');
+                await chatRef.child(`messages/${newIndex + 1}`).set({
+                    role: 'model',
+                    content: response,
+                    timestamp: Date.now()
+                });
+            }, 1000 + (response.length * 20)); // Typing speed simulation
+        }
+
+        // --- 6. AI LOGIC (TRAINING RETRIEVAL) ---
+        async function generateAIResponse(query) {
+            // Fetch training data
+            const snapshot = await firebase.database().ref('training').once('value');
+            const data = snapshot.val() || {};
+            
+            // Simple Fuzzy Match Logic
+            let bestMatch = null;
+            let highestScore = 0;
+            const q = query.toLowerCase();
+
+            Object.values(data).forEach(item => {
+                const prompt = item.prompt.toLowerCase();
+                let score = 0;
+                
+                // Exact match
+                if (prompt === q) score = 100;
+                // Includes
+                else if (prompt.includes(q) || q.includes(prompt)) score = 50;
+                // Word overlap
+                else {
+                    const words = prompt.split(' ');
+                    const hits = words.filter(w => q.includes(w)).length;
+                    score = (hits / words.length) * 40;
+                }
+
+                if (score > highestScore) {
+                    highestScore = score;
+                    bestMatch = item.response;
+                }
+            });
+
+            if (highestScore > 20 && bestMatch) {
+                return bestMatch;
+            } else {
+                return "I'm not trained on that specific topic yet. As an Admin, you can add this to my training data.";
+            }
+        }
+
+        function appendMessageToUI(role, text, animate) {
+            const container = el('messages-container');
+            const div = document.createElement('div');
+            const isUser = role === 'user';
+            
+            div.className = `flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`;
+            
+            const avatar = isUser 
+                ? `<div class="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center ml-2 shrink-0"><i class="fas fa-user"></i></div>`
+                : `<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 text-white flex items-center justify-center mr-2 shrink-0"><i class="fas fa-star"></i></div>`;
+            
+            const contentClass = isUser 
+                ? 'bg-brand-50 dark:bg-brand-900/20 text-gray-800 dark:text-gray-100 rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%]'
+                : 'bg-white dark:bg-dark-surface border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] shadow-sm';
+
+            const htmlContent = marked.parse(text);
+
+            div.innerHTML = isUser 
+                ? `<div class="${contentClass}">${htmlContent}</div>${avatar}`
+                : `${avatar}<div class="${contentClass} markdown-body">${htmlContent}</div>`;
+
+            container.appendChild(div);
+            
+            if (animate) {
+                div.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // --- 7. ADMIN FUNCTIONS ---
+        function loadAdminData() {
+            const db = firebase.database();
+            
+            // Load Models
+            db.ref('models').on('value', snap => {
+                const models = snap.val() || {};
+                const list = el('models-list');
+                const select = el('train-model-select');
+                list.innerHTML = '';
+                select.innerHTML = '<option value="default">Default</option>';
+                
+                Object.keys(models).forEach(key => {
+                    const m = models[key];
+                    // List Item
+                    const item = document.createElement('div');
+                    item.className = 'flex justify-between items-center p-2 bg-gray-50 dark:bg-dark-input rounded border border-gray-200 dark:border-gray-600';
+                    item.innerHTML = `<span>${m.name} <span class="text-xs bg-gray-200 px-1 rounded">${m.version}</span></span> <button onclick="deleteModel('${key}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
+                    list.appendChild(item);
+                    
+                    // Select Option
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.innerText = `${m.name} (${m.version})`;
+                    select.appendChild(opt);
+                });
+            });
+
+            // Load Users for Management
+            db.ref('users').on('value', snap => {
+                const users = snap.val() || {};
+                const list = el('users-list');
+                list.innerHTML = '';
+                
+                Object.keys(users).forEach(uid => {
+                    const u = users[uid];
+                    const div = document.createElement('div');
+                    div.className = 'p-3 border rounded mb-2 dark:border-gray-600 flex justify-between items-center';
+                    
+                    const isBanned = u.isBanned;
+                    const isAdmin = u.role === 'admin';
+                    
+                    div.innerHTML = `
+                        <div>
+                            <p class="font-bold text-sm">${u.email} ${isAdmin ? '<i class="fas fa-check-circle text-blue-500"></i>' : ''}</p>
+                            <p class="text-xs text-gray-500">${uid}</p>
+                        </div>
+                        <div class="flex gap-2">
+                             ${!isAdmin ? `<button onclick="toggleBan('${uid}', ${!isBanned})" class="text-xs px-2 py-1 rounded ${isBanned ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${isBanned ? 'Unban' : 'Ban'}</button>` : ''}
+                             ${!isAdmin ? `<button onclick="makeAdmin('${uid}')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">Make Admin</button>` : ''}
+                             <button onclick="deleteUserHistory('${uid}')" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded"><i class="fas fa-trash"></i> Hist</button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            });
+        }
+
+        function addModel() {
+            const name = el('new-model-name').value;
+            const ver = el('new-model-ver').value;
+            if(name && ver) {
+                firebase.database().ref('models').push({ name, version: ver, created: Date.now() });
+                el('new-model-name').value = '';
+            }
+        }
+
+        function deleteModel(key) {
+            firebase.database().ref(`models/${key}`).remove();
+        }
+
+        function addTrainingData() {
+            const prompt = el('train-prompt').value;
+            const response = el('train-response').value;
+            const model = el('train-model-select').value;
+            
+            if(prompt && response) {
+                firebase.database().ref('training').push({
+                    prompt, response, model, timestamp: Date.now()
+                });
+                alert('Training Data Saved!');
+                el('train-prompt').value = '';
+                el('train-response').value = '';
+            }
+        }
+
+        function toggleBan(uid, status) {
+            firebase.database().ref(`users/${uid}`).update({ isBanned: status });
+        }
+
+        function makeAdmin(uid) {
+            if(confirm('Make this user an admin? They will have full control.')) {
+                firebase.database().ref(`users/${uid}`).update({ role: 'admin' });
+            }
+        }
+
+        function deleteUserHistory(uid) {
+            if(confirm('Delete all chat history for this user?')) {
+                firebase.database().ref(`chats/${uid}`).remove();
+            }
+        }
+
+        function clearChatHistory() {
+            if(confirm('Are you sure you want to delete your entire chat history?')) {
+                firebase.database().ref(`chats/${state.user.uid}`).remove();
+                el('chat-history-list').innerHTML = '';
+                el('messages-container').innerHTML = '';
+            }
+        }
+
+        // --- 8. UI HANDLERS ---
+        function toggleMobileSidebar() {
+            const sb = el('sidebar');
+            const overlay = el('sidebar-overlay');
+            if (sb.classList.contains('-translate-x-full')) {
+                sb.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sb.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                el('theme-icon').className = 'fas fa-moon';
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                el('theme-icon').className = 'fas fa-sun';
+            }
+        }
+
+        function adjustHeight(elem) {
+            elem.style.height = 'auto';
+            elem.style.height = (elem.scrollHeight) + 'px';
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Auth Logic
+        function handleLogin() {
+            const e = el('auth-email').value;
+            const p = el('auth-password').value;
+            firebase.auth().signInWithEmailAndPassword(e, p).catch(err => {
+                el('auth-error').innerText = err.message;
+                show('auth-error');
+            });
+        }
+
+        function handleRegister() {
+            const e = el('auth-email').value;
+            const p = el('auth-password').value;
+            firebase.auth().createUserWithEmailAndPassword(e, p).then(cred => {
+                // Initialize user in DB
+                firebase.database().ref(`users/${cred.user.uid}`).set({
+                    email: e,
+                    role: 'user', // Default role
+                    isBanned: false
+                });
+            }).catch(err => {
+                el('auth-error').innerText = err.message;
+                show('auth-error');
+            });
+        }
+
+        function logout() {
+            firebase.auth().signOut().then(() => {
+                window.location.reload();
+            });
+        }
+
+        // Settings Modal
+        function openSettings() { show('settings-modal'); }
+        function closeSettings() { hide('settings-modal'); }
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'font-bold'));
+            
+            el(`tab-${tabName}`).classList.remove('hidden');
+            const btn = document.querySelector(`button[data-tab="${tabName}"]`);
+            if(btn) btn.classList.add('bg-gray-200', 'dark:bg-gray-700', 'font-bold');
+        }
+
+        // Load Theme on Start
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // Init
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
