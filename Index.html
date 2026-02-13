@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Knowledge Pro | AI Chat</title>
+    <title>Knowledge Pro | AI Architecture</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -15,22 +15,24 @@
                         brand: {
                             50: '#f0f9ff',
                             100: '#e0f2fe',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            900: '#0c4a6e',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
                         },
                         dark: {
-                            bg: '#131314',
-                            surface: '#1e1f20',
-                            input: '#282a2c'
+                            bg: '#0e0e10',
+                            surface: '#1c1c1f',
+                            input: '#2b2c2f'
                         }
                     },
                     animation: {
-                        'blink': 'blink 1s step-end infinite',
-                        'fade-in': 'fadeIn 0.3s ease-out'
+                        'subtle-pulse': 'subtlePulse 2s infinite',
+                        'slide-up': 'slideUp 0.4s ease-out forwards',
+                        'fade-in': 'fadeIn 0.5s ease-in'
                     },
                     keyframes: {
-                        blink: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0' } },
+                        subtlePulse: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.7' } },
+                        slideUp: { '0%': { transform: 'translateY(10px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
                         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } }
                     }
                 }
@@ -39,54 +41,51 @@
     </script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
 
     <style type="text/tailwindcss">
         @layer utilities {
+            .glass { @apply bg-white/70 dark:bg-dark-surface/70 backdrop-blur-md; }
             .scrollbar-hide::-webkit-scrollbar { display: none; }
-            .markdown-body p { @apply mb-2; }
-            .markdown-body pre { @apply bg-gray-100 dark:bg-black p-3 rounded-lg overflow-x-auto my-2 text-sm; }
-            .markdown-body code { @apply font-mono text-pink-600 dark:text-pink-400; }
-            .markdown-body ul { @apply list-disc list-inside mb-2; }
+            .markdown-body pre { @apply bg-gray-900 text-gray-100 p-4 rounded-xl my-3 overflow-x-auto text-xs border border-gray-700; }
+            .markdown-body code { @apply font-mono text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-1 rounded; }
+            .chat-bubble { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     </style>
 </head>
-<body class="bg-white dark:bg-dark-bg text-gray-900 dark:text-gray-100 transition-colors duration-200 h-[100dvh] flex flex-col overflow-hidden">
+<body class="bg-[#f9fafb] dark:bg-dark-bg text-gray-900 dark:text-gray-100 h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300">
 
-    <div id="loading-screen" class="fixed inset-0 z-[100] bg-white dark:bg-dark-bg flex flex-col items-center justify-center transition-opacity duration-500">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mb-4"></div>
-        <h2 class="text-xl font-semibold animate-pulse">Knowledge Pro</h2>
-        <p class="text-sm text-gray-500 mt-2">Connecting to System...</p>
+    <div id="loading-screen" class="fixed inset-0 z-[100] bg-white dark:bg-dark-bg flex flex-col items-center justify-center">
+        <div class="relative">
+            <div class="h-16 w-16 border-4 border-brand-100 border-t-brand-600 rounded-full animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="h-4 w-4 bg-brand-600 rounded-full animate-ping"></div>
+            </div>
+        </div>
+        <h2 class="mt-6 text-lg font-medium tracking-tight">Syncing Intelligence...</h2>
     </div>
 
-    <div id="auth-screen" class="hidden fixed inset-0 z-[80] bg-white dark:bg-dark-bg flex items-center justify-center p-4">
-        <div class="max-w-sm w-full space-y-6">
-            <div class="text-center">
-                <h1 class="text-3xl font-bold text-brand-600">Knowledge Pro</h1>
-                <p class="text-gray-500 mt-2">Sign in to continue</p>
-            </div>
-            
-            <div class="bg-gray-50 dark:bg-dark-surface p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div id="auth-screen" class="hidden fixed inset-0 z-[80] glass flex items-center justify-center p-4">
+        <div class="max-w-md w-full animate-slide-up">
+            <div class="bg-white dark:bg-dark-surface p-8 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-600 text-white text-2xl mb-4 shadow-lg shadow-brand-500/30">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold">Welcome Back</h1>
+                    <p class="text-gray-500 text-sm">Enter details to access Knowledge Pro</p>
+                </div>
+                
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Email</label>
-                        <input type="email" id="auth-email" class="w-full p-3 bg-white dark:bg-dark-input border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Password</label>
-                        <input type="password" id="auth-password" class="w-full p-3 bg-white dark:bg-dark-input border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
-                    </div>
-                    <p id="auth-error" class="text-red-500 text-sm hidden"></p>
-                    
-                    <button onclick="handleLogin()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-3 rounded-lg transition">Log In</button>
-                    <button onclick="handleRegister()" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium py-3 rounded-lg transition">Create Account</button>
+                    <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 bg-gray-50 dark:bg-dark-input rounded-2xl border-none focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                    <input type="password" id="auth-password" placeholder="Password" class="w-full p-4 bg-gray-50 dark:bg-dark-input rounded-2xl border-none focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                    <p id="auth-error" class="text-red-500 text-xs text-center hidden"></p>
+                    <button onclick="handleLogin()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-4 rounded-2xl shadow-lg transition-all active:scale-[0.98]">Sign In</button>
+                    <button onclick="handleRegister()" class="w-full text-gray-500 hover:text-brand-600 text-sm font-medium transition-all">Create an account</button>
                 </div>
             </div>
         </div>
@@ -94,163 +93,145 @@
 
     <div id="app-container" class="hidden flex h-full w-full">
         
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-gray-50 dark:bg-dark-surface transform -translate-x-full md:translate-x-0 transition-transform duration-300 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-            <div class="p-4 flex items-center justify-between">
-                <div onclick="toggleMobileSidebar()" class="md:hidden cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                    <i class="fas fa-times text-xl"></i>
-                </div>
-                <button onclick="createNewChat()" class="flex-1 md:ml-0 ml-4 flex items-center gap-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2.5 rounded-full text-sm font-medium transition">
-                    <i class="fas fa-plus"></i> New Chat
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 glass border-r border-gray-200 dark:border-gray-800 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col">
+            <div class="p-6">
+                <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 p-3 rounded-2xl hover:bg-brand-100 transition-all font-medium border border-brand-100 dark:border-brand-900/30">
+                    <i class="fas fa-plus-circle"></i> New Chat
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto px-2 space-y-1" id="chat-history-list">
-                </div>
+            <div class="flex-1 overflow-y-auto px-4 space-y-2 scrollbar-hide" id="chat-history-list"></div>
 
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-lg transition" onclick="openSettings()">
-                    <div class="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold" id="user-avatar">U</div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium truncate flex items-center gap-1">
-                            <span id="user-name-display">User</span>
-                            <i id="admin-badge" class="hidden fas fa-certificate text-blue-500 text-xs" title="Admin"></i>
-                        </p>
-                        <p class="text-xs text-gray-500 truncate" id="user-email-display">email@example.com</p>
+            <div class="p-6 border-t border-gray-100 dark:border-gray-800">
+                <div onclick="openSettings()" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-all">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-blue-700 flex items-center justify-center text-white shadow-md" id="user-avatar">
+                        <i class="fas fa-user-circle"></i>
                     </div>
-                    <i class="fas fa-cog text-gray-400"></i>
+                    <div class="flex-1 truncate">
+                        <p class="text-sm font-bold flex items-center gap-1">
+                            <span id="user-name-display">User</span>
+                            <i id="admin-badge" class="hidden fas fa-shield-check text-blue-500 text-[10px]"></i>
+                        </p>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold" id="user-role">Member</p>
+                    </div>
                 </div>
             </div>
         </aside>
 
-        <div id="sidebar-overlay" onclick="toggleMobileSidebar()" class="fixed inset-0 z-30 bg-black/50 hidden md:hidden fade-in"></div>
-
-        <main class="flex-1 flex flex-col h-full relative md:ml-72 bg-white dark:bg-dark-bg">
-            
-            <header class="h-14 flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                <div class="flex items-center gap-3">
-                    <button onclick="toggleMobileSidebar()" class="md:hidden text-gray-500">
-                        <i class="fas fa-bars text-xl"></i>
-                    </button>
-                    <span id="current-model-display" class="text-sm font-medium text-gray-500 flex items-center gap-1">
-                        Knowledge Pro <span class="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">v1.0</span>
-                    </span>
+        <main class="flex-1 flex flex-col h-full relative md:ml-72 transition-all">
+            <header class="h-16 flex items-center justify-between px-6 border-b border-gray-100 dark:border-gray-800 shrink-0 glass z-30">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleMobileSidebar()" class="md:hidden text-gray-500 text-xl"><i class="fas fa-bars-staggered"></i></button>
+                    <h2 class="font-bold text-lg tracking-tight bg-gradient-to-r from-brand-600 to-blue-400 bg-clip-text text-transparent">Knowledge Pro</h2>
                 </div>
-                <div>
-                     <button onclick="toggleDarkMode()" class="text-gray-400 hover:text-brand-500 transition">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-gray-500">
                         <i class="fas fa-moon" id="theme-icon"></i>
                     </button>
                 </div>
             </header>
 
-            <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide pb-32">
-                <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center p-6 opacity-60">
-                    <i class="fas fa-brain text-6xl text-brand-200 mb-6"></i>
-                    <h2 class="text-2xl font-semibold mb-2">How can I help you today?</h2>
-                    <p class="text-sm text-gray-500 max-w-md">I am trained on custom data. Ask me anything about the system or configured topics.</p>
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth pb-40">
+                <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center p-6 animate-fade-in">
+                    <div class="w-20 h-20 rounded-3xl bg-brand-50 dark:bg-brand-900/10 flex items-center justify-center text-brand-600 text-4xl mb-6 animate-subtle-pulse shadow-sm">
+                        <i class="fas fa-sparkles"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-3">System Online.</h2>
+                    <p class="text-gray-500 max-w-sm">How can I assist your workflow today?</p>
                 </div>
             </div>
 
-            <div class="absolute bottom-0 left-0 right-0 bg-white dark:bg-dark-bg p-4 pt-2">
-                <div class="max-w-3xl mx-auto relative">
-                    <div id="ai-typing-indicator" class="hidden absolute -top-8 left-0 text-xs text-gray-400 flex items-center gap-1">
-                        <span class="animate-bounce">●</span>
-                        <span class="animate-bounce delay-100">●</span>
-                        <span class="animate-bounce delay-200">●</span>
-                        Generating response...
+            <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 glass border-t border-gray-100 dark:border-gray-800">
+                <div class="max-w-4xl mx-auto">
+                    <div id="ai-typing-indicator" class="hidden absolute -top-10 left-6 text-xs font-bold text-brand-500 animate-pulse flex items-center gap-2">
+                        <i class="fas fa-circle-notch animate-spin"></i> THINKING...
                     </div>
 
-                    <div class="relative bg-gray-100 dark:bg-dark-input rounded-[24px] border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-colors">
+                    <div class="relative group">
                         <textarea 
                             id="message-input" 
                             rows="1" 
-                            class="w-full bg-transparent p-4 pr-12 max-h-32 resize-none outline-none text-sm" 
-                            placeholder="Message Knowledge Pro..."
+                            class="w-full bg-gray-50 dark:bg-dark-input p-5 pr-14 rounded-3xl border-2 border-transparent focus:border-brand-500/20 focus:ring-4 focus:ring-brand-500/5 outline-none transition-all resize-none shadow-sm" 
+                            placeholder="Type a query..."
                             oninput="adjustHeight(this)"
-                            onkeydown="handleEnter(event)"
                         ></textarea>
-                        <button onclick="sendMessage()" class="absolute right-2 bottom-2 p-2 bg-brand-600 text-white rounded-full h-8 w-8 flex items-center justify-center hover:bg-brand-700 transition disabled:opacity-50" id="send-btn">
-                            <i class="fas fa-arrow-up text-xs"></i>
+                        <button id="send-btn" onclick="sendMessage()" class="absolute right-3 bottom-3 w-10 h-10 bg-brand-600 text-white rounded-2xl flex items-center justify-center shadow-lg hover:shadow-brand-500/40 hover:-translate-y-0.5 active:scale-95 transition-all">
+                            <i class="fas fa-paper-plane text-sm"></i>
                         </button>
                     </div>
-                    <p class="text-[10px] text-center text-gray-400 mt-2">
-                        AI can make mistakes. Check important info.
-                    </p>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="settings-modal" class="hidden fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-dark-surface w-full max-w-4xl h-[80vh] rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+    <div id="settings-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-dark-surface w-full max-w-5xl h-[85vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-200 dark:border-gray-800 animate-slide-up">
             
-            <div class="w-full md:w-64 bg-gray-50 dark:bg-[#18181b] p-4 flex flex-col gap-2 border-r border-gray-200 dark:border-gray-700">
-                <h3 class="font-bold mb-4 px-2">Settings</h3>
-                <button onclick="switchTab('profile')" class="tab-btn text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active-tab" data-tab="profile"><i class="fas fa-user mr-2"></i> Profile</button>
-                
-                <div id="admin-tabs" class="hidden flex flex-col gap-2 mt-2 border-t border-gray-200 dark:border-gray-700 pt-2">
-                    <span class="text-xs text-gray-500 uppercase px-2 mt-2 font-bold">Admin Panel</span>
-                    <button onclick="switchTab('models')" class="tab-btn text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-tab="models"><i class="fas fa-robot mr-2"></i> Models</button>
-                    <button onclick="switchTab('training')" class="tab-btn text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-tab="training"><i class="fas fa-graduation-cap mr-2"></i> Training</button>
-                    <button onclick="switchTab('users')" class="tab-btn text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-tab="users"><i class="fas fa-users mr-2"></i> Users & History</button>
-                </div>
-
-                <div class="flex-1"></div>
-                <button onclick="logout()" class="text-left p-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"><i class="fas fa-sign-out-alt mr-2"></i> Sign Out</button>
-                <button onclick="closeSettings()" class="md:hidden mt-2 p-2 border border-gray-300 rounded text-center">Close</button>
+            <div class="w-full md:w-72 bg-gray-50 dark:bg-[#151518] p-8 border-r border-gray-100 dark:border-gray-800">
+                <h3 class="text-xs uppercase tracking-widest font-black text-gray-400 mb-8">Navigation</h3>
+                <nav class="space-y-3">
+                    <button onclick="switchTab('profile')" class="tab-btn w-full flex items-center gap-3 p-4 rounded-2xl transition-all font-medium" data-tab="profile"><i class="fas fa-user-circle"></i> Profile</button>
+                    <div id="admin-tabs" class="hidden space-y-3 pt-6">
+                        <div class="h-px bg-gray-200 dark:bg-gray-800 mx-2 mb-6"></div>
+                        <button onclick="switchTab('models')" class="tab-btn w-full flex items-center gap-3 p-4 rounded-2xl transition-all font-medium" data-tab="models"><i class="fas fa-cube"></i> Models</button>
+                        <button onclick="switchTab('training')" class="tab-btn w-full flex items-center gap-3 p-4 rounded-2xl transition-all font-medium" data-tab="training"><i class="fas fa-brain"></i> Intelligence</button>
+                        <button onclick="switchTab('users')" class="tab-btn w-full flex items-center gap-3 p-4 rounded-2xl transition-all font-medium" data-tab="users"><i class="fas fa-users-gear"></i> Control Hub</button>
+                    </div>
+                </nav>
+                <button onclick="logout()" class="mt-12 w-full flex items-center gap-3 p-4 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-all"><i class="fas fa-power-off"></i> Logout</button>
             </div>
 
-            <div class="flex-1 p-6 overflow-y-auto bg-white dark:bg-dark-surface relative">
-                <button onclick="closeSettings()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
+            <div class="flex-1 p-8 md:p-12 overflow-y-auto relative">
+                <button onclick="closeSettings()" class="absolute top-8 right-8 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"><i class="fas fa-times text-2xl"></i></button>
 
-                <div id="tab-profile" class="tab-content block">
-                    <h2 class="text-xl font-bold mb-4">User Profile</h2>
-                    <div class="p-4 border rounded-lg dark:border-gray-700">
-                        <p class="text-sm text-gray-500">Email</p>
-                        <p class="font-mono text-lg" id="profile-email">...</p>
-                        <div class="mt-4 flex gap-2">
-                             <button onclick="clearChatHistory()" class="bg-red-100 text-red-600 px-3 py-1 rounded text-sm hover:bg-red-200">Delete My Chat History</button>
-                        </div>
+                <div id="tab-profile" class="tab-content">
+                    <h2 class="text-3xl font-black mb-8">Your Identity</h2>
+                    <div class="bg-gray-50 dark:bg-dark-input p-8 rounded-[2rem] border border-gray-100 dark:border-gray-800">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-2">Authenticated Email</p>
+                        <p class="text-xl font-mono mb-8" id="profile-email">---</p>
+                        <button onclick="clearChatHistory()" class="px-6 py-3 bg-red-100 dark:bg-red-900/20 text-red-600 rounded-xl text-sm font-bold hover:bg-red-200 transition-all">Flush Chat Database</button>
                     </div>
                 </div>
 
                 <div id="tab-models" class="tab-content hidden">
-                    <h2 class="text-xl font-bold mb-4">Manage Models</h2>
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="new-model-name" placeholder="Model Name (e.g. Gemini Pro)" class="border p-2 rounded text-sm flex-1 dark:bg-dark-input dark:border-gray-600">
-                        <input type="text" id="new-model-ver" placeholder="Version (e.g. v2)" class="border p-2 rounded text-sm w-24 dark:bg-dark-input dark:border-gray-600">
-                        <button onclick="addModel()" class="bg-brand-600 text-white px-4 rounded text-sm">Add</button>
+                    <h2 class="text-3xl font-black mb-8">Model Architect</h2>
+                    <div class="grid gap-6 mb-8">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <input type="text" id="new-model-name" placeholder="Model Name" class="flex-1 p-4 rounded-2xl dark:bg-dark-input border-none ring-1 ring-gray-200 dark:ring-gray-800">
+                            <input type="text" id="new-model-ver" placeholder="v1.0" class="w-32 p-4 rounded-2xl dark:bg-dark-input border-none ring-1 ring-gray-200 dark:ring-gray-800">
+                            <button onclick="addModel()" class="bg-brand-600 text-white px-8 rounded-2xl font-bold">Deploy</button>
+                        </div>
                     </div>
-                    <div id="models-list" class="space-y-2"></div>
+                    <div id="models-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
 
                 <div id="tab-training" class="tab-content hidden">
-                    <h2 class="text-xl font-bold mb-4">AI Training Data</h2>
-                    <p class="text-xs text-gray-500 mb-2">The system uses Fuzzy Matching to find the best answer.</p>
-                    <div class="bg-gray-50 dark:bg-dark-input p-4 rounded-lg mb-4 space-y-3">
-                        <input type="text" id="train-prompt" placeholder="User Query / Keyword" class="w-full p-2 border rounded dark:bg-dark-bg dark:border-gray-600">
-                        <textarea id="train-response" rows="3" placeholder="AI Response (Markdown supported)" class="w-full p-2 border rounded dark:bg-dark-bg dark:border-gray-600"></textarea>
-                        <select id="train-model-select" class="w-full p-2 border rounded dark:bg-dark-bg dark:border-gray-600"></select>
-                        <button onclick="addTrainingData()" class="w-full bg-green-600 text-white py-2 rounded">Save Knowledge</button>
+                    <h2 class="text-3xl font-black mb-2">Training Lab</h2>
+                    <p class="text-gray-500 mb-8 text-sm">Update the global knowledge base of the bot.</p>
+                    <div class="space-y-6">
+                        <input type="text" id="train-prompt" placeholder="User Query Trigger" class="w-full p-4 rounded-2xl dark:bg-dark-input border-none ring-1 ring-gray-200 dark:ring-gray-800">
+                        <textarea id="train-response" rows="4" placeholder="AI Synthetic Response" class="w-full p-4 rounded-2xl dark:bg-dark-input border-none ring-1 ring-gray-200 dark:ring-gray-800 resize-none"></textarea>
+                        <select id="train-model-select" class="w-full p-4 rounded-2xl dark:bg-dark-input border-none ring-1 ring-gray-200 dark:ring-gray-800"></select>
+                        <button onclick="addTrainingData()" class="w-full bg-brand-600 text-white py-5 rounded-[2rem] font-black tracking-widest shadow-xl shadow-brand-500/20">COMMIT TO MEMORY</button>
                     </div>
                 </div>
 
                 <div id="tab-users" class="tab-content hidden">
-                    <h2 class="text-xl font-bold mb-4">User Management</h2>
-                    <div id="users-list" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
+                    <h2 class="text-3xl font-black mb-8">User Control</h2>
+                    <div id="users-list" class="space-y-4"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="banned-screen" class="hidden fixed inset-0 z-[200] bg-red-50 dark:bg-red-900/20 flex flex-col items-center justify-center text-center p-6">
-        <i class="fas fa-ban text-6xl text-red-500 mb-4"></i>
-        <h1 class="text-3xl font-bold text-red-600 mb-2">Account Suspended</h1>
-        <p class="text-gray-600 dark:text-gray-300">You have been banned by an administrator.</p>
-        <button onclick="logout()" class="mt-6 px-6 py-2 bg-gray-800 text-white rounded hover:bg-gray-900">Sign Out</button>
+    <div id="banned-screen" class="hidden fixed inset-0 z-[200] bg-white dark:bg-dark-bg flex flex-col items-center justify-center p-10 text-center">
+        <div class="w-24 h-24 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mb-6"><i class="fas fa-user-slash"></i></div>
+        <h1 class="text-4xl font-black text-red-600 mb-2">ACCESS REVOKED</h1>
+        <p class="text-gray-500 max-w-sm mb-8">Your account has been suspended by an administrator for violating system protocols.</p>
+        <button onclick="logout()" class="px-8 py-4 bg-gray-900 text-white rounded-2xl font-bold">Exit Terminal</button>
     </div>
 
     <script>
-        // --- 1. FIREBASE CONFIGURATION (Integrated) ---
         const firebaseConfig = {
             apiKey: "AIzaSyBD473HnZjcmuBlEwd7uaI0MB-hKU4_Nfs",
             authDomain: "knowledge-pro-c9ee5.firebaseapp.com",
@@ -262,38 +243,26 @@
             measurementId: "G-ZXZC2BH72M"
         };
 
-        // --- 2. STATE & UTILS ---
         const state = {
             user: null,
             userData: null,
-            chats: {},
             currentChatId: null,
-            models: [],
-            trainingData: []
+            models: []
         };
 
         const el = (id) => document.getElementById(id);
-        const show = (id) => el(id)?.classList.remove('hidden');
-        const hide = (id) => el(id)?.classList.add('hidden');
-        
-        // --- 3. INIT LOGIC ---
+        const show = (id) => el(id).classList.remove('hidden');
+        const hide = (id) => el(id).classList.add('hidden');
+
+        // INITIALIZE
         function initApp() {
-            // Initialize Firebase directly
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-                // Initialize Analytics (optional but included as per request)
-                if(firebase.analytics) {
-                    firebase.analytics();
-                }
-            }
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             
-            // Auth Listener
             firebase.auth().onAuthStateChanged(user => {
                 if (user) {
                     state.user = user;
                     loadUserData(user.uid);
                 } else {
-                    state.user = null;
                     hide('loading-screen');
                     hide('app-container');
                     show('auth-screen');
@@ -301,83 +270,65 @@
             });
         }
 
-        // --- 4. USER & DATA LOGIC ---
         async function loadUserData(uid) {
             const db = firebase.database();
-            
-            // Listen to User Profile
             db.ref(`users/${uid}`).on('value', snapshot => {
                 const data = snapshot.val();
                 if (!data) {
-                    // Create default user entry if missing
-                    db.ref(`users/${uid}`).set({
-                        email: state.user.email,
-                        role: 'user',
-                        isBanned: false,
-                        history: []
-                    });
+                    db.ref(`users/${uid}`).set({ email: state.user.email, role: 'user', isBanned: false });
                 } else {
-                    state.userData = data;
                     if (data.isBanned) {
                         show('banned-screen');
+                        hide('loading-screen');
                         return;
                     }
+                    state.userData = data;
+                    el('user-name-display').innerText = data.email.split('@')[0];
+                    el('user-role').innerText = data.role === 'admin' ? 'System Administrator' : 'Member';
+                    el('profile-email').innerText = data.email;
+
                     if (data.role === 'admin') {
-                        el('admin-badge').classList.remove('hidden');
-                        el('admin-tabs').classList.remove('hidden');
-                    } else {
-                        el('admin-badge').classList.add('hidden');
-                        el('admin-tabs').classList.add('hidden');
+                        show('admin-badge');
+                        show('admin-tabs');
+                        loadAdminData();
                     }
                     
-                    // Proceed to Load Chats
                     loadChats(uid);
-                }
-                
-                el('user-name-display').innerText = data?.email.split('@')[0] || 'User';
-                el('user-email-display').innerText = data?.email || state.user.email;
-                el('profile-email').innerText = data?.email || state.user.email;
-
-                // Move to App Screen if fully loaded
-                hide('auth-screen');
-                hide('loading-screen');
-                show('app-container');
-                
-                // If admin, load training data + models
-                if (data?.role === 'admin') {
-                    loadAdminData();
+                    hide('loading-screen');
+                    show('app-container');
                 }
             });
         }
 
         function loadChats(uid) {
-            const db = firebase.database();
-            db.ref(`chats/${uid}`).on('value', snapshot => {
+            firebase.database().ref(`chats/${uid}`).on('value', snapshot => {
                 const list = el('chat-history-list');
                 list.innerHTML = '';
                 const chats = snapshot.val() || {};
                 
-                Object.keys(chats).forEach(id => {
+                Object.keys(chats).reverse().forEach(id => {
                     const chat = chats[id];
                     if (chat.deleted) return;
                     
-                    const btn = document.createElement('button');
-                    btn.className = `w-full text-left px-4 py-2 text-sm rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 truncate ${state.currentChatId === id ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300' : 'text-gray-700 dark:text-gray-300'}`;
-                    btn.innerHTML = `<i class="far fa-comment-alt mr-2"></i> ${chat.title || 'New Chat'}`;
-                    btn.onclick = () => openChat(id);
-                    list.appendChild(btn);
+                    const div = document.createElement('div');
+                    div.className = `group flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all ${state.currentChatId === id ? 'bg-brand-600 text-white shadow-lg' : 'hover:bg-gray-100 dark:hover:bg-dark-input text-gray-600 dark:text-gray-400'}`;
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3 truncate flex-1" onclick="openChat('${id}')">
+                            <i class="far fa-message text-xs opacity-60"></i>
+                            <span class="text-sm font-medium truncate">${chat.title || 'Untitled Session'}</span>
+                        </div>
+                        <button onclick="deleteChat('${id}')" class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all"><i class="fas fa-trash-alt text-xs"></i></button>
+                    `;
+                    list.appendChild(div);
                 });
             });
         }
 
-        // --- 5. CHAT FUNCTIONALITY ---
         function createNewChat() {
-            const db = firebase.database();
-            const chatId = db.ref().child('chats').push().key;
-            db.ref(`chats/${state.user.uid}/${chatId}`).set({
-                title: 'New Chat',
+            const chatId = firebase.database().ref().child('chats').push().key;
+            firebase.database().ref(`chats/${state.user.uid}/${chatId}`).set({
+                title: 'New Session',
                 created: Date.now(),
-                deleted: false,
                 messages: []
             });
             openChat(chatId);
@@ -386,195 +337,122 @@
 
         function openChat(chatId) {
             state.currentChatId = chatId;
-            el('messages-container').innerHTML = ''; // Clear UI
+            el('messages-container').innerHTML = '';
             hide('welcome-screen');
             
-            // Re-render UI History
-            loadChats(state.user.uid);
-
-            const db = firebase.database();
-            db.ref(`chats/${state.user.uid}/${chatId}/messages`).on('value', snapshot => {
-                const msgs = snapshot.val() || [];
+            firebase.database().ref(`chats/${state.user.uid}/${chatId}/messages`).on('value', snapshot => {
                 const container = el('messages-container');
-                container.innerHTML = ''; // Full redraw for simplicity
-                
-                if (msgs.length === 0) {
-                    container.innerHTML = `<div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center p-6 opacity-60">
-                        <i class="fas fa-brain text-6xl text-brand-200 mb-6"></i>
-                        <h2 class="text-2xl font-semibold mb-2">Ready to assist.</h2></div>`;
-                } else {
-                    msgs.forEach(m => {
-                        appendMessageToUI(m.role, m.content, false);
-                    });
-                }
+                container.innerHTML = '';
+                const msgs = snapshot.val() || [];
+                msgs.forEach(m => renderMessage(m.role, m.content));
                 container.scrollTop = container.scrollHeight;
             });
         }
 
         async function sendMessage() {
             const input = el('message-input');
+            const btn = el('send-btn');
             const text = input.value.trim();
             if (!text || !state.currentChatId) return;
 
             input.value = '';
-            input.style.height = 'auto'; // Reset height
-            
-            const db = firebase.database();
-            const chatRef = db.ref(`chats/${state.user.uid}/${state.currentChatId}`);
-            
-            // 1. Get current messages count to index new ones
+            input.style.height = 'auto';
+            btn.disabled = true;
+
+            const chatRef = firebase.database().ref(`chats/${state.user.uid}/${state.currentChatId}`);
             const snapshot = await chatRef.child('messages').get();
             const msgs = snapshot.val() || [];
+            
             const newIndex = msgs.length;
+            await chatRef.child(`messages/${newIndex}`).set({ role: 'user', content: text });
+            if (newIndex === 0) chatRef.update({ title: text.substring(0, 25) + '...' });
 
-            // 2. Add User Message
-            await chatRef.child(`messages/${newIndex}`).set({
-                role: 'user',
-                content: text,
-                timestamp: Date.now()
-            });
-
-            // Update title if first message
-            if (newIndex === 0) {
-                chatRef.update({ title: text.substring(0, 30) + '...' });
-            }
-
-            // 3. AI Processing (Simulate streaming)
             show('ai-typing-indicator');
-            const response = await generateAIResponse(text);
+            const aiResponse = await processAI(text);
             
-            // Simulate Streaming Delay
             setTimeout(async () => {
+                await chatRef.child(`messages/${newIndex + 1}`).set({ role: 'model', content: aiResponse });
                 hide('ai-typing-indicator');
-                await chatRef.child(`messages/${newIndex + 1}`).set({
-                    role: 'model',
-                    content: response,
-                    timestamp: Date.now()
-                });
-            }, 1000 + (response.length * 20)); // Typing speed simulation
+                btn.disabled = false;
+            }, 800);
         }
 
-        // --- 6. AI LOGIC (TRAINING RETRIEVAL) ---
-        async function generateAIResponse(query) {
-            // Fetch training data
-            const snapshot = await firebase.database().ref('training').once('value');
-            const data = snapshot.val() || {};
-            
-            // Simple Fuzzy Match Logic
-            let bestMatch = null;
-            let highestScore = 0;
+        async function processAI(query) {
+            const snap = await firebase.database().ref('training').once('value');
+            const data = snap.val() || {};
             const q = query.toLowerCase();
-
+            let match = "I haven't been trained for that specific query yet.";
+            
             Object.values(data).forEach(item => {
-                const prompt = item.prompt.toLowerCase();
-                let score = 0;
-                
-                // Exact match
-                if (prompt === q) score = 100;
-                // Includes
-                else if (prompt.includes(q) || q.includes(prompt)) score = 50;
-                // Word overlap
-                else {
-                    const words = prompt.split(' ');
-                    const hits = words.filter(w => q.includes(w)).length;
-                    score = (hits / words.length) * 40;
-                }
-
-                if (score > highestScore) {
-                    highestScore = score;
-                    bestMatch = item.response;
-                }
+                if (q.includes(item.prompt.toLowerCase())) match = item.response;
             });
-
-            if (highestScore > 20 && bestMatch) {
-                return bestMatch;
-            } else {
-                return "I'm not trained on that specific topic yet. As an Admin, you can add this to my training data.";
-            }
+            return match;
         }
 
-        function appendMessageToUI(role, text, animate) {
+        function renderMessage(role, content) {
             const container = el('messages-container');
+            const isAI = role === 'model';
             const div = document.createElement('div');
-            const isUser = role === 'user';
+            div.className = `flex ${isAI ? 'justify-start' : 'justify-end'} animate-slide-up chat-bubble`;
             
-            div.className = `flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`;
-            
-            const avatar = isUser 
-                ? `<div class="w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center ml-2 shrink-0"><i class="fas fa-user"></i></div>`
-                : `<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 text-white flex items-center justify-center mr-2 shrink-0"><i class="fas fa-star"></i></div>`;
-            
-            const contentClass = isUser 
-                ? 'bg-brand-50 dark:bg-brand-900/20 text-gray-800 dark:text-gray-100 rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%]'
-                : 'bg-white dark:bg-dark-surface border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] shadow-sm';
-
-            const htmlContent = marked.parse(text);
-
-            div.innerHTML = isUser 
-                ? `<div class="${contentClass}">${htmlContent}</div>${avatar}`
-                : `${avatar}<div class="${contentClass} markdown-body">${htmlContent}</div>`;
-
+            div.innerHTML = `
+                <div class="flex ${isAI ? 'flex-row' : 'flex-row-reverse'} gap-4 max-w-[85%]">
+                    <div class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-xs shadow-sm ${isAI ? 'bg-white dark:bg-dark-surface border dark:border-gray-800' : 'bg-brand-600 text-white'}">
+                        <i class="fas ${isAI ? 'fa-sparkles text-brand-500' : 'fa-user'}"></i>
+                    </div>
+                    <div class="p-5 rounded-3xl ${isAI ? 'bg-white dark:bg-dark-surface border border-gray-100 dark:border-gray-800 shadow-sm' : 'bg-brand-600 text-white shadow-lg shadow-brand-500/10'} markdown-body text-sm leading-relaxed">
+                        ${marked.parse(content)}
+                    </div>
+                </div>
+            `;
             container.appendChild(div);
-            
-            if (animate) {
-                div.scrollIntoView({ behavior: 'smooth' });
-            }
         }
 
-        // --- 7. ADMIN FUNCTIONS ---
+        // ADMIN HUB
         function loadAdminData() {
             const db = firebase.database();
             
-            // Load Models
             db.ref('models').on('value', snap => {
-                const models = snap.val() || {};
                 const list = el('models-list');
-                const select = el('train-model-select');
+                const sel = el('train-model-select');
                 list.innerHTML = '';
-                select.innerHTML = '<option value="default">Default</option>';
+                sel.innerHTML = '<option value="default">Knowledge Engine Core</option>';
+                const models = snap.val() || {};
                 
-                Object.keys(models).forEach(key => {
-                    const m = models[key];
-                    // List Item
-                    const item = document.createElement('div');
-                    item.className = 'flex justify-between items-center p-2 bg-gray-50 dark:bg-dark-input rounded border border-gray-200 dark:border-gray-600';
-                    item.innerHTML = `<span>${m.name} <span class="text-xs bg-gray-200 px-1 rounded">${m.version}</span></span> <button onclick="deleteModel('${key}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>`;
-                    list.appendChild(item);
-                    
-                    // Select Option
-                    const opt = document.createElement('option');
-                    opt.value = key;
-                    opt.innerText = `${m.name} (${m.version})`;
-                    select.appendChild(opt);
+                Object.keys(models).forEach(k => {
+                    const m = models[k];
+                    list.innerHTML += `
+                        <div class="bg-gray-50 dark:bg-dark-input p-5 rounded-2xl flex justify-between items-center border border-gray-100 dark:border-gray-800">
+                            <div><p class="font-bold">${m.name}</p><p class="text-[10px] text-gray-500 font-mono">${m.version}</p></div>
+                            <button onclick="deleteModel('${k}')" class="text-red-400 p-2"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                    sel.innerHTML += `<option value="${k}">${m.name}</option>`;
                 });
             });
 
-            // Load Users for Management
             db.ref('users').on('value', snap => {
-                const users = snap.val() || {};
                 const list = el('users-list');
                 list.innerHTML = '';
+                const users = snap.val() || {};
                 
                 Object.keys(users).forEach(uid => {
                     const u = users[uid];
-                    const div = document.createElement('div');
-                    div.className = 'p-3 border rounded mb-2 dark:border-gray-600 flex justify-between items-center';
-                    
                     const isBanned = u.isBanned;
-                    const isAdmin = u.role === 'admin';
-                    
-                    div.innerHTML = `
-                        <div>
-                            <p class="font-bold text-sm">${u.email} ${isAdmin ? '<i class="fas fa-check-circle text-blue-500"></i>' : ''}</p>
-                            <p class="text-xs text-gray-500">${uid}</p>
-                        </div>
-                        <div class="flex gap-2">
-                             ${!isAdmin ? `<button onclick="toggleBan('${uid}', ${!isBanned})" class="text-xs px-2 py-1 rounded ${isBanned ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${isBanned ? 'Unban' : 'Ban'}</button>` : ''}
-                             ${!isAdmin ? `<button onclick="makeAdmin('${uid}')" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">Make Admin</button>` : ''}
-                             <button onclick="deleteUserHistory('${uid}')" class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded"><i class="fas fa-trash"></i> Hist</button>
+                    list.innerHTML += `
+                        <div class="p-6 bg-gray-50 dark:bg-dark-input rounded-[1.5rem] flex flex-col md:flex-row justify-between gap-4 border border-gray-100 dark:border-gray-800">
+                            <div>
+                                <p class="font-black text-sm">${u.email}</p>
+                                <p class="text-[10px] font-mono text-gray-400">${uid}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="toggleBan('${uid}', ${!isBanned})" class="px-4 py-2 rounded-xl text-xs font-bold transition-all ${isBanned ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}">
+                                    ${isBanned ? 'REINSTATE' : 'TERMINATE'}
+                                </button>
+                                <button onclick="deleteUserHistory('${uid}')" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-xl text-xs font-bold">WIPE DATA</button>
+                            </div>
                         </div>
                     `;
-                    list.appendChild(div);
                 });
             });
         }
@@ -582,147 +460,61 @@
         function addModel() {
             const name = el('new-model-name').value;
             const ver = el('new-model-ver').value;
-            if(name && ver) {
-                firebase.database().ref('models').push({ name, version: ver, created: Date.now() });
+            if(name) {
+                firebase.database().ref('models').push({ name, version: ver || 'v1.0' });
                 el('new-model-name').value = '';
             }
         }
 
-        function deleteModel(key) {
-            firebase.database().ref(`models/${key}`).remove();
-        }
-
         function addTrainingData() {
-            const prompt = el('train-prompt').value;
-            const response = el('train-response').value;
-            const model = el('train-model-select').value;
-            
-            if(prompt && response) {
-                firebase.database().ref('training').push({
-                    prompt, response, model, timestamp: Date.now()
-                });
-                alert('Training Data Saved!');
-                el('train-prompt').value = '';
-                el('train-response').value = '';
+            const p = el('train-prompt').value;
+            const r = el('train-response').value;
+            if(p && r) {
+                firebase.database().ref('training').push({ prompt: p, response: r });
+                alert('Intelligence Updated Successfully');
+                el('train-prompt').value = ''; el('train-response').value = '';
             }
         }
 
-        function toggleBan(uid, status) {
-            firebase.database().ref(`users/${uid}`).update({ isBanned: status });
-        }
-
-        function makeAdmin(uid) {
-            if(confirm('Make this user an admin? They will have full control.')) {
-                firebase.database().ref(`users/${uid}`).update({ role: 'admin' });
-            }
-        }
-
-        function deleteUserHistory(uid) {
-            if(confirm('Delete all chat history for this user?')) {
-                firebase.database().ref(`chats/${uid}`).remove();
-            }
-        }
-
-        function clearChatHistory() {
-            if(confirm('Are you sure you want to delete your entire chat history?')) {
-                firebase.database().ref(`chats/${state.user.uid}`).remove();
-                el('chat-history-list').innerHTML = '';
-                el('messages-container').innerHTML = '';
-            }
-        }
-
-        // --- 8. UI HANDLERS ---
-        function toggleMobileSidebar() {
-            const sb = el('sidebar');
-            const overlay = el('sidebar-overlay');
-            if (sb.classList.contains('-translate-x-full')) {
-                sb.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sb.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
-        }
-
-        function toggleDarkMode() {
-            const html = document.documentElement;
-            if (html.classList.contains('dark')) {
-                html.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-                el('theme-icon').className = 'fas fa-moon';
-            } else {
-                html.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-                el('theme-icon').className = 'fas fa-sun';
-            }
-        }
-
-        function adjustHeight(elem) {
-            elem.style.height = 'auto';
-            elem.style.height = (elem.scrollHeight) + 'px';
-        }
-
-        function handleEnter(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        }
-
-        // Auth Logic
+        function toggleBan(uid, status) { firebase.database().ref(`users/${uid}`).update({ isBanned: status }); }
+        function deleteUserHistory(uid) { if(confirm('Wipe user memory?')) firebase.database().ref(`chats/${uid}`).remove(); }
+        function deleteModel(k) { firebase.database().ref(`models/${k}`).remove(); }
+        function deleteChat(id) { firebase.database().ref(`chats/${state.user.uid}/${id}`).update({ deleted: true }); }
+        
         function handleLogin() {
-            const e = el('auth-email').value;
-            const p = el('auth-password').value;
-            firebase.auth().signInWithEmailAndPassword(e, p).catch(err => {
-                el('auth-error').innerText = err.message;
-                show('auth-error');
+            firebase.auth().signInWithEmailAndPassword(el('auth-email').value, el('auth-password').value).catch(e => {
+                el('auth-error').innerText = e.message; show('auth-error');
             });
         }
 
         function handleRegister() {
-            const e = el('auth-email').value;
-            const p = el('auth-password').value;
-            firebase.auth().createUserWithEmailAndPassword(e, p).then(cred => {
-                // Initialize user in DB
-                firebase.database().ref(`users/${cred.user.uid}`).set({
-                    email: e,
-                    role: 'user', // Default role
-                    isBanned: false
-                });
-            }).catch(err => {
-                el('auth-error').innerText = err.message;
-                show('auth-error');
+            firebase.auth().createUserWithEmailAndPassword(el('auth-email').value, el('auth-password').value).catch(e => {
+                el('auth-error').innerText = e.message; show('auth-error');
             });
         }
 
-        function logout() {
-            firebase.auth().signOut().then(() => {
-                window.location.reload();
-            });
-        }
-
-        // Settings Modal
-        function openSettings() { show('settings-modal'); }
+        function logout() { firebase.auth().signOut().then(() => window.location.reload()); }
+        function openSettings() { show('settings-modal'); switchTab('profile'); }
         function closeSettings() { hide('settings-modal'); }
-        function switchTab(tabName) {
+        function toggleMobileSidebar() { el('sidebar').classList.toggle('-translate-x-full'); }
+        function adjustHeight(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight) + 'px'; }
+        
+        function switchTab(t) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'font-bold'));
-            
-            el(`tab-${tabName}`).classList.remove('hidden');
-            const btn = document.querySelector(`button[data-tab="${tabName}"]`);
-            if(btn) btn.classList.add('bg-gray-200', 'dark:bg-gray-700', 'font-bold');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('bg-brand-600', 'text-white'));
+            el(`tab-${t}`).classList.remove('hidden');
+            const activeBtn = document.querySelector(`[data-tab="${t}"]`);
+            if(activeBtn) activeBtn.classList.add('bg-brand-600', 'text-white');
         }
 
-        // Load Theme on Start
-        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            el('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
         }
 
-        // Init
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
         window.onload = initApp;
-
     </script>
 </body>
 </html>
