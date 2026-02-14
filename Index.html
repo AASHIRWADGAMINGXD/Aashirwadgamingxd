@@ -272,8 +272,16 @@
             appId: "1:14035001235:web:cb7c8a0d7c0ce48d729266"
         };
 
-        const RENDER_API_URL = "https://ai-bot-brain.onrender.com/chat"; // REPLACE THIS
-
+        const RENDER_API_URL = "https://ai-bot-brain.onrender.com/chat"; // REPLACE TH
+// डेटा भेजने वाला फंक्शन
+const response = await fetch(RENDER_API_URL, {
+    method: 'POST', // ध्यान दें: यह POST होना चाहिए
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ message: "Hello" }) // 'message' की स्पेलिंग चेक करें
+});
+        
         // --- 2. INITIALIZATION ---
         let app, auth, db;
         let currentUser = null, currentUserData = null, currentChatId = null;
