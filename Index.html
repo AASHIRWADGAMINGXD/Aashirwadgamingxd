@@ -3,265 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Knowledge Pro | AI Chat</title>
+    <title>Knowledge Pro - Infinite Void</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            900: '#0c4a6e',
-                        },
-                        dark: {
-                            bg: '#131314',
-                            surface: '#1e1f20',
-                            input: '#2d2e2f'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        /* CSS Variables for Theme */
+        :root {
+            --gojo-red: #D00000;
+            --gojo-black: #050505;
+            --gojo-violet: #8A2BE2;
+            --glass: rgba(15, 15, 15, 0.8);
+        }
 
-        /* Loader */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--gojo-black);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Loading Screen */
         #loading {
-            position: fixed; inset: 0; z-index: 9999;
-            background: #ffffff; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            transition: opacity 0.5s ease;
+            position: fixed;
+            inset: 0;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-size: 1.5rem;
+            letter-spacing: 5px;
+            color: var(--gojo-red);
+            text-transform: uppercase;
         }
-        .dark #loading { background: #131314; color: white; }
-        .spinner {
-            width: 40px; height: 40px; border: 4px solid #e2e8f0;
-            border-top: 4px solid #0ea5e9; border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Typing Cursor */
-        .typing-cursor::after {
-            content: '▋';
-            animation: blink 1s step-start infinite;
-            color: #0ea5e9;
+        /* Canvas Background - Infinite Void */
+        #void-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
         }
-        @keyframes blink { 50% { opacity: 0; } }
 
-        /* Markdown Styles */
-        .prose pre { background: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
-        .prose code { background: #e2e8f0; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.9em; }
-        .dark .prose code { background: #374151; color: #e5e7eb; }
-        .prose p { margin-bottom: 0.5rem; }
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-container {
+            height: calc(100dvh - 80px); /* Dynamic viewport height for mobile keyboard */
+        }
+
+        .user-msg {
+            align-self: flex-end;
+            background: rgba(208, 0, 0, 0.2);
+            border: 1px solid var(--gojo-red);
+            border-radius: 15px 15px 0 15px;
+            box-shadow: 0 0 10px rgba(208, 0, 0, 0.3);
+        }
+
+        .ai-msg {
+            align-self: flex-start;
+            background: rgba(138, 43, 226, 0.1);
+            border: 1px solid var(--gojo-violet);
+            border-radius: 15px 15px 15px 0;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.2);
+        }
+
+        /* Sidebar transitions */
+        #sidebar {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--gojo-red); border-radius: 10px; }
+
+        pre {
+            background: #1a1a1a !important;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #333;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--gojo-violet);
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-dark-bg dark:text-gray-200 transition-colors duration-200 h-dvh flex overflow-hidden">
+<body class="min-h-screen flex flex-col">
 
-    <div id="loading">
-        <div class="spinner mb-4"></div>
-        <div class="text-lg font-semibold animate-pulse">Initializing Knowledge Pro...</div>
-    </div>
+    <canvas id="void-canvas"></canvas>
 
-    <div id="auth-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
-            <h2 class="text-2xl font-bold mb-2 text-center text-brand-600">Knowledge Pro</h2>
-            <p class="text-gray-500 text-center mb-6 text-sm">Sign in to continue chatting</p>
-            
-            <form id="auth-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Email</label>
-                    <input type="email" id="auth-email" class="w-full p-3 rounded-lg border dark:bg-dark-input dark:border-gray-600 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="name@example.com" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Password</label>
-                    <input type="password" id="auth-pass" class="w-full p-3 rounded-lg border dark:bg-dark-input dark:border-gray-600 focus:ring-2 focus:ring-brand-500 outline-none" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-brand-500/30">
-                    Enter Application
-                </button>
-            </form>
-            <p id="auth-error" class="text-red-500 text-sm mt-4 text-center hidden"></p>
+    <div id="loading">DOMAIN EXPANSION...</div>
+
+    <div id="auth-screen" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4 hidden">
+        <div class="glass-panel p-8 rounded-2xl w-full max-w-md border-red-900 border-2 text-center">
+            <h1 class="text-4xl font-bold text-red-600 mb-6">KNOWLEDGE PRO</h1>
+            <p class="text-gray-400 mb-8">Enter your credentials to enter the Infinite Void</p>
+            <input type="email" id="email" placeholder="Email" class="w-full bg-zinc-900 border border-zinc-700 p-3 rounded mb-4 focus:outline-none focus:border-red-600">
+            <input type="password" id="password" placeholder="Password" class="w-full bg-zinc-900 border border-zinc-700 p-3 rounded mb-6 focus:outline-none focus:border-red-600">
+            <button onclick="handleLogin()" class="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 rounded transition-all">LOGIN</button>
+            <p id="auth-error" class="text-red-500 mt-4 text-sm"></p>
         </div>
     </div>
 
-    <div id="app-container" class="flex w-full h-full opacity-0 transition-opacity duration-500">
+    <div id="app-ui" class="flex flex-1 overflow-hidden opacity-0 transition-opacity duration-1000">
         
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-gray-100 dark:bg-dark-surface transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col border-r border-gray-200 dark:border-gray-700">
-            <div class="p-4 flex items-center justify-between">
-                <div class="flex items-center gap-2 text-brand-600 font-bold text-xl">
-                    <i class="ri-brain-fill"></i> <span>Knowledge Pro</span>
-                </div>
-                <button id="close-sidebar-btn" class="md:hidden p-2 text-gray-500 hover:text-gray-800 dark:hover:text-white">
-                    <i class="ri-close-line text-2xl"></i>
+        <aside id="sidebar" class="fixed lg:relative z-50 w-72 h-full glass-panel border-r border-zinc-800 -translate-x-full lg:translate-x-0 flex flex-col">
+            <div class="p-4 border-b border-zinc-800 flex justify-between items-center">
+                <button onclick="createNewChat()" class="flex-1 flex items-center justify-center gap-2 border border-red-900 hover:bg-red-900/20 py-2 rounded transition-all">
+                    <i class="fas fa-plus"></i> New Chat
                 </button>
+                <button onclick="toggleSidebar()" class="lg:hidden ml-2 text-xl"><i class="fas fa-times"></i></button>
             </div>
-
-            <div class="px-4 mb-4">
-                <button id="new-chat-btn" class="w-full flex items-center justify-center gap-2 bg-white dark:bg-dark-input hover:bg-gray-50 dark:hover:bg-gray-700 py-3 rounded-full shadow-sm border border-gray-200 dark:border-gray-600 transition-colors">
-                    <i class="ri-add-line"></i> <span class="text-sm font-medium">New chat</span>
+            <div id="chat-history" class="flex-1 overflow-y-auto p-2 space-y-1">
+                </div>
+            <div class="p-4 border-t border-zinc-800 space-y-2">
+                <button onclick="openSettings()" class="w-full text-left p-2 hover:bg-zinc-800 rounded flex items-center gap-3">
+                    <i class="fas fa-cog"></i> Settings
                 </button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto px-2 space-y-1" id="chat-history-list"></div>
-
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-dark-surface">
-                <div id="user-profile" class="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">
-                    <div class="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold text-xs" id="user-avatar">U</div>
-                    <div class="flex-1 overflow-hidden">
-                        <p class="text-sm font-medium truncate" id="user-email">user@email.com</p>
-                        <p class="text-xs text-gray-500" id="user-role">User</p>
-                    </div>
-                    <i class="ri-settings-4-line text-gray-400"></i>
+                <div id="admin-menu" class="hidden">
+                    <button onclick="openAdminPanel()" class="w-full text-left p-2 text-red-500 hover:bg-red-900/10 rounded flex items-center gap-3">
+                        <i class="fas fa-user-shield"></i> Admin Panel
+                    </button>
                 </div>
-                
-                <div id="settings-menu" class="hidden mt-2 space-y-1 text-sm">
-                    <button id="btn-theme" class="w-full text-left p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"><i class="ri-moon-line mr-2"></i> Toggle Theme</button>
-                    <button id="btn-admin" class="hidden w-full text-left p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-brand-600"><i class="ri-admin-line mr-2"></i> Admin Panel</button>
-                    <button id="btn-logout" class="w-full text-left p-2 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded"><i class="ri-logout-box-line mr-2"></i> Logout</button>
-                </div>
+                <button onclick="handleLogout()" class="w-full text-left p-2 text-gray-400 hover:bg-zinc-800 rounded flex items-center gap-3">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col relative w-full md:ml-72 bg-white dark:bg-dark-bg h-full">
-            
-            <div class="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                <button id="mobile-menu-btn" class="text-gray-600 dark:text-gray-300">
-                    <i class="ri-menu-line text-2xl"></i>
-                </button>
-                <span class="font-bold text-lg">Knowledge Pro</span>
-                <div class="w-6"></div>
-            </div>
-
-            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 hidden md:block">
-                <button id="model-selector-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-dark-surface rounded-lg text-sm font-medium shadow-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition">
-                    <span id="current-model-name">Standard Model</span>
-                    <i class="ri-arrow-down-s-line"></i>
-                </button>
-                <div id="model-dropdown" class="hidden absolute top-12 left-0 w-48 bg-white dark:bg-dark-surface rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden py-1"></div>
-            </div>
-
-            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth pb-32">
-                <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center opacity-80">
-                    <div class="w-16 h-16 bg-gradient-to-tr from-blue-400 to-brand-600 rounded-2xl mb-4 shadow-lg animate-pulse"></div>
-                    <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 mb-2">Hello, Human</h1>
-                    <p class="text-gray-500 dark:text-gray-400">How can I help you today?</p>
+        <main class="flex-1 flex flex-col relative min-w-0">
+            <header class="p-4 glass-panel border-b border-zinc-800 flex items-center justify-between">
+                <button onclick="toggleSidebar()" class="lg:hidden text-2xl"><i class="fas fa-bars"></i></button>
+                <div class="flex items-center gap-2">
+                    <span id="current-model-name" class="font-bold text-red-500">Knowledge v1</span>
+                    <span id="admin-badge" class="hidden text-blue-500"><i class="fas fa-check-circle"></i></span>
                 </div>
-            </div>
+                <button onclick="toggleDarkMode()" class="text-xl"><i class="fas fa-moon"></i></button>
+            </header>
 
-            <div class="flex-none p-4 bg-white dark:bg-dark-bg">
-                <div class="max-w-4xl mx-auto relative">
-                    <div class="bg-gray-100 dark:bg-dark-input rounded-3xl flex items-end p-2 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-colors">
-                        <button class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full transition">
-                            <i class="ri-add-circle-line text-2xl"></i>
-                        </button>
-                        <textarea id="chat-input" rows="1" class="flex-1 bg-transparent border-none outline-none resize-none py-3 px-2 max-h-32 text-gray-800 dark:text-white placeholder-gray-500" placeholder="Enter a prompt here..."></textarea>
-                        <button id="send-btn" class="p-2 mb-0.5 text-brand-500 hover:text-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                            <i class="ri-send-plane-2-fill text-2xl"></i>
-                        </button>
-                    </div>
-                    <p class="text-center text-xs text-gray-400 mt-2">Knowledge Pro may display inaccurate info.</p>
+            <div id="messages" class="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 flex flex-col">
                 </div>
+
+            <div class="p-4 bg-transparent">
+                <div class="max-w-4xl mx-auto relative glass-panel rounded-2xl border border-zinc-700 p-2 flex items-end gap-2 shadow-2xl">
+                    <select id="model-selector" class="bg-zinc-900 text-xs border-none p-2 rounded focus:ring-0 cursor-pointer mb-1">
+                        <option value="v1">v1 (Default)</option>
+                    </select>
+                    <textarea id="userInput" rows="1" placeholder="Send a message..." class="flex-1 bg-transparent border-none focus:ring-0 p-2 resize-none max-h-40 overflow-y-auto text-white"></textarea>
+                    <button onclick="sendMessage()" class="bg-red-700 hover:bg-red-600 text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all mb-1">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <p class="text-[10px] text-center text-gray-500 mt-2">Infinite Void System | Property of Gojo Satoru</p>
             </div>
         </main>
     </div>
 
-    <div id="admin-panel" class="hidden fixed inset-0 z-50 bg-white dark:bg-dark-bg flex flex-col overflow-hidden">
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-dark-surface">
-            <h2 class="text-xl font-bold text-brand-600 flex items-center gap-2"><i class="ri-admin-fill"></i> Admin Dashboard</h2>
-            <button id="close-admin" class="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><i class="ri-close-line text-2xl"></i></button>
-        </div>
-        <div class="flex-1 flex overflow-hidden">
-            <div class="w-16 md:w-64 bg-gray-100 dark:bg-dark-surface border-r border-gray-200 dark:border-gray-700 flex flex-col">
-                <nav class="flex-1 p-2 space-y-1">
-                    <button onclick="switchAdminTab('training')" id="tab-btn-training" class="admin-tab-btn w-full text-left p-3 rounded hover:bg-white dark:hover:bg-gray-700 flex items-center gap-3 bg-white dark:bg-gray-800 shadow-sm"><i class="ri-database-2-line"></i> <span class="hidden md:inline">Training Data</span></button>
-                    <button onclick="switchAdminTab('models')" id="tab-btn-models" class="admin-tab-btn w-full text-left p-3 rounded hover:bg-white dark:hover:bg-gray-700 flex items-center gap-3"><i class="ri-cpu-line"></i> <span class="hidden md:inline">Models</span></button>
-                    <button onclick="switchAdminTab('users')" id="tab-btn-users" class="admin-tab-btn w-full text-left p-3 rounded hover:bg-white dark:hover:bg-gray-700 flex items-center gap-3"><i class="ri-user-settings-line"></i> <span class="hidden md:inline">User Management</span></button>
-                    <button onclick="switchAdminTab('reports')" id="tab-btn-reports" class="admin-tab-btn w-full text-left p-3 rounded hover:bg-white dark:hover:bg-gray-700 flex items-center gap-3"><i class="ri-flag-line"></i> <span class="hidden md:inline">Reports</span></button>
-                </nav>
+    <div id="modal-overlay" class="fixed inset-0 bg-black/80 z-[200] hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-2xl rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900">
+                <h2 id="modal-title" class="text-xl font-bold">Settings</h2>
+                <button onclick="closeModal()" class="text-2xl">&times;</button>
             </div>
-            
-            <div class="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-dark-bg">
-                
-                <div id="admin-training" class="admin-section">
-                    <h3 class="text-2xl font-bold mb-4">AI Training Center</h3>
-                    <div class="bg-white dark:bg-dark-surface p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-                        <h4 class="font-semibold mb-4">Add New Knowledge</h4>
-                        <div class="grid gap-4">
-                            <input type="text" id="train-keywords" placeholder="User Question / Keywords" class="w-full p-3 rounded border dark:bg-dark-input dark:border-gray-600">
-                            <textarea id="train-answer" rows="4" placeholder="AI Response" class="w-full p-3 rounded border dark:bg-dark-input dark:border-gray-600"></textarea>
-                            <button id="btn-save-training" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded w-fit">Save to Database</button>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-dark-surface p-4 rounded-xl border dark:border-gray-700">
-                        <h4 class="font-semibold mb-2">Existing Data</h4>
-                        <div id="training-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
-                    </div>
+            <div id="modal-content" class="p-6 overflow-y-auto flex-1">
                 </div>
-
-                <div id="admin-models" class="admin-section hidden">
-                    <h3 class="text-2xl font-bold mb-4">Model Management</h3>
-                    <div class="bg-white dark:bg-dark-surface p-6 rounded-xl shadow-sm border mb-6 dark:border-gray-700">
-                         <div class="flex flex-col md:flex-row gap-4">
-                            <input type="text" id="model-name" placeholder="Model Name (e.g. Gemini Pro)" class="p-3 border rounded dark:bg-dark-input dark:border-gray-600 flex-1">
-                            <select id="model-access" class="p-3 border rounded dark:bg-dark-input dark:border-gray-600">
-                                <option value="free">Free</option>
-                                <option value="pro">Pro (Admin)</option>
-                            </select>
-                            <button id="btn-add-model" class="bg-brand-600 text-white px-6 py-2 rounded font-bold">Create</button>
-                        </div>
-                    </div>
-                    <div id="models-list" class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"></div>
-                </div>
-
-                <div id="admin-users" class="admin-section hidden">
-                    <h3 class="text-2xl font-bold mb-4">User Management</h3>
-                    <div class="overflow-x-auto bg-white dark:bg-dark-surface rounded-xl shadow-sm border dark:border-gray-700">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b dark:border-gray-700 text-gray-500 bg-gray-50 dark:bg-gray-800">
-                                    <th class="p-3">Email</th>
-                                    <th class="p-3">Role</th>
-                                    <th class="p-3">Status</th>
-                                    <th class="p-3">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-list"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="admin-reports" class="admin-section hidden">
-                     <h3 class="text-2xl font-bold mb-4">User Reports</h3>
-                     <div id="reports-list" class="space-y-4"></div>
-                </div>
-
-            </div>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
     <script>
         // --- 1. CONFIGURATION ---
-        // अपनी API Keys और Render URL यहाँ डालें
         const firebaseConfig = {
             apiKey: "AIzaSyBD473HnZjcmuBlEwd7uaI0MB-hKU4_Nfs",
             authDomain: "knowledge-pro-c9ee5.firebaseapp.com",
@@ -272,337 +210,239 @@
             appId: "1:14035001235:web:cb7c8a0d7c0ce48d729266"
         };
 
-        const RENDER_API_URL = "https://ai-bot-brain.onrender.com/chat"; // REPLACE TH
-// डेटा भेजने वाला फंक्शन
-const response = await fetch(RENDER_API_URL, {
-    method: 'POST', // ध्यान दें: यह POST होना चाहिए
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ message: "Hello" }) // 'message' की स्पेलिंग चेक करें
-});
-        
         // --- 2. INITIALIZATION ---
-        let app, auth, db;
-        let currentUser = null, currentUserData = null, currentChatId = null;
-        
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-            auth = firebase.auth();
-            db = firebase.database();
-        } catch (e) {
-            console.error(e);
-            document.getElementById('loading').innerHTML = `<p class="text-red-500">Firebase Error</p>`;
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        let currentUser = null;
+        let isAdmin = false;
+        let currentChatId = 'default';
+
+        // --- 3. INFINITE VOID CANVAS ANIMATION ---
+        const canvas = document.getElementById('void-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            particles = [];
+            for(let i=0; i<200; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    z: Math.random() * canvas.width,
+                    o: Math.random()
+                });
+            }
         }
 
-        const els = {
-            loading: document.getElementById('loading'),
-            authModal: document.getElementById('auth-modal'),
-            authForm: document.getElementById('auth-form'),
-            appContainer: document.getElementById('app-container'),
-            sidebar: document.getElementById('sidebar'),
-            msgContainer: document.getElementById('messages-container'),
-            input: document.getElementById('chat-input'),
-            sendBtn: document.getElementById('send-btn'),
-            historyList: document.getElementById('chat-history-list'),
-            mobileMenuBtn: document.getElementById('mobile-menu-btn'),
-            closeSidebarBtn: document.getElementById('close-sidebar-btn'),
-            userProfile: document.getElementById('user-profile'),
-            settingsMenu: document.getElementById('settings-menu'),
-            newChatBtn: document.getElementById('new-chat-btn'),
-            adminPanel: document.getElementById('admin-panel'),
-            adminBtn: document.getElementById('btn-admin'),
-            modelSelector: document.getElementById('model-selector-btn'),
-            modelDropdown: document.getElementById('model-dropdown'),
-            currentModelName: document.getElementById('current-model-name')
-        };
+        function drawCanvas() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
 
-        // --- 3. AUTH & UI ---
-        auth.onAuthStateChanged(async (user) => {
+            particles.forEach(p => {
+                p.z -= 5;
+                if(p.z <= 0) p.z = canvas.width;
+
+                const sx = (p.x - centerX) * (canvas.width / p.z) + centerX;
+                const sy = (p.y - centerY) * (canvas.width / p.z) + centerY;
+                const size = (1 - p.z / canvas.width) * 5;
+
+                ctx.beginPath();
+                ctx.fillStyle = p.o > 0.5 ? '#fff' : '#8A2BE2';
+                ctx.arc(sx, sy, size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            requestAnimationFrame(drawCanvas);
+        }
+
+        // --- 4. AUTH LOGIC ---
+        auth.onAuthStateChanged(user => {
+            document.getElementById('loading').classList.add('hidden');
             if (user) {
                 currentUser = user;
-                const userRef = db.ref('users/' + user.uid);
-                userRef.on('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (!data) {
-                        // Create first user as Admin, others as User
-                        db.ref('users').once('value', (allUsers) => {
-                            const isFirst = !allUsers.exists();
-                            const newData = { email: user.email, role: isFirst ? 'admin' : 'user', isBanned: false };
-                            userRef.set(newData);
-                        });
-                    } else {
-                        currentUserData = data;
-                        if (data.isBanned) { auth.signOut(); alert("You are banned."); return; }
-                        if (data.role === 'admin') els.adminBtn.classList.remove('hidden');
-                        initUI();
-                    }
-                });
-                els.authModal.classList.add('hidden');
+                checkAdminStatus();
+                showApp();
             } else {
-                els.authModal.classList.remove('hidden');
-                els.authModal.classList.add('flex');
+                showAuth();
             }
         });
 
-        function initUI() {
-            els.loading.style.display = 'none';
-            els.appContainer.classList.add('opacity-100');
-            document.getElementById('user-email').textContent = currentUser.email;
-            document.getElementById('user-role').textContent = currentUserData.role.toUpperCase();
-            loadHistory();
+        async function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (error) {
+                document.getElementById('auth-error').innerText = error.message;
+            }
         }
 
-        els.authForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('auth-email').value;
-            const pass = document.getElementById('auth-pass').value;
-            try { await auth.signInWithEmailAndPassword(email, pass); } 
-            catch { 
-                try { await auth.createUserWithEmailAndPassword(email, pass); }
-                catch(err) { document.getElementById('auth-error').textContent = err.message; document.getElementById('auth-error').classList.remove('hidden'); }
-            }
-        });
-
-        // --- 4. CHAT LOGIC (Connected to Render) ---
-        els.sendBtn.addEventListener('click', handleSend);
-        els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
-
-        async function handleSend() {
-            const text = els.input.value.trim();
-            if (!text || (currentUserData && currentUserData.isBanned)) return;
-
-            els.input.value = '';
-            document.getElementById('welcome-screen').classList.add('hidden');
-
-            if (!currentChatId) {
-                const newChatRef = db.ref('chats').push();
-                currentChatId = newChatRef.key;
-                await newChatRef.set({ userId: currentUser.uid, title: text.substring(0, 30), timestamp: firebase.database.ServerValue.TIMESTAMP });
-            }
-
-            appendMessage('user', text);
-            saveMessage('user', text);
-            processAIResponse(text);
+        function handleLogout() {
+            auth.signOut();
+            location.reload();
         }
 
-        async function processAIResponse(query) {
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'flex justify-start w-full mb-6';
-            typingDiv.innerHTML = `<div class="bg-white dark:bg-dark-surface p-4 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
-                <i class="ri-robot-2-line text-brand-500"></i><span class="text-gray-500 text-sm animate-pulse">Connecting to Neural Network...</span></div>`;
-            els.msgContainer.appendChild(typingDiv);
-            els.msgContainer.scrollTop = els.msgContainer.scrollHeight;
+        async function checkAdminStatus() {
+            // Static check based on prompt: "only admins can edit"
+            // For production, this should be a role in Database
+            const snapshot = await db.ref('admins/' + currentUser.uid).once('value');
+            if (snapshot.exists()) {
+                isAdmin = true;
+                document.getElementById('admin-menu').classList.remove('hidden');
+                document.getElementById('admin-badge').classList.remove('hidden');
+            }
+        }
+
+        // --- 5. CHAT LOGIC ---
+        async function sendMessage() {
+            const inputField = document.getElementById("userInput");
+            const message = inputField.value.trim();
+            const messagesDiv = document.getElementById("messages");
+            const model = document.getElementById('model-selector').value;
+
+            if (!message) return;
+
+            // Check if Banned
+            const banCheck = await db.ref('banned/' + currentUser.uid).once('value');
+            if (banCheck.exists()) {
+                alert("You are banned by admin");
+                return;
+            }
+
+            // UI Update: User Message
+            const userMsgHtml = `
+                <div class="user-msg p-4 max-w-[85%] animate-fade-in">
+                    <b>You:</b><br>${message}
+                </div>`;
+            messagesDiv.innerHTML += userMsgHtml;
+            inputField.value = "";
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // AI Typing Indicator
+            const aiId = 'ai-' + Date.now();
+            messagesDiv.innerHTML += `
+                <div id="${aiId}" class="ai-msg p-4 max-w-[85%]">
+                    <b>AI:</b> <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                </div>`;
 
             try {
-                // RENDER API CALL
-                const response = await fetch(RENDER_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: query })
+                const response = await fetch("https://ai-bot-brain.onrender.com/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: message, model: model })
                 });
+
                 const data = await response.json();
-                typingDiv.remove();
-                streamAIResponse(data.reply || "API response empty.");
+                const aiMsgElement = document.getElementById(aiId);
+                
+                // Typing Animation Simulation
+                aiMsgElement.innerHTML = `<b>AI (${model}):</b><br><div class="markdown-body"></div>`;
+                const body = aiMsgElement.querySelector('.markdown-body');
+                
+                let i = 0;
+                const stream = data.reply;
+                const interval = setInterval(() => {
+                    body.innerHTML = marked.parse(stream.substring(0, i));
+                    i += 2;
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    if(i >= stream.length + 2) clearInterval(interval);
+                }, 10);
+
+                // Persist to Firebase
+                db.ref(`chats/${currentUser.uid}/${currentChatId}/history`).push({
+                    role: 'user', text: message, timestamp: Date.now()
+                });
+                db.ref(`chats/${currentUser.uid}/${currentChatId}/history`).push({
+                    role: 'ai', text: data.reply, timestamp: Date.now()
+                });
+
             } catch (error) {
-                typingDiv.remove();
-                appendMessage('ai', "**Server Error:** Render API is sleeping or unreachable. Please wait 1 minute and try again.");
+                document.getElementById(aiId).innerHTML = `<span style='color:red;'>Error connecting to Infinite Void</span>`;
             }
         }
 
-        function streamAIResponse(answer) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'flex w-full mb-6 justify-start';
-            const bubble = document.createElement('div');
-            bubble.className = 'max-w-[85%] rounded-2xl p-4 shadow-sm bg-white dark:bg-dark-surface border dark:border-gray-700 prose dark:prose-invert typing-cursor';
-            msgDiv.appendChild(bubble);
-            els.msgContainer.appendChild(msgDiv);
-
-            let i = 0;
-            const interval = setInterval(() => {
-                bubble.innerHTML = marked.parse(answer.substring(0, i));
-                els.msgContainer.scrollTop = els.msgContainer.scrollHeight;
-                if (i++ >= answer.length) {
-                    clearInterval(interval);
-                    bubble.classList.remove('typing-cursor');
-                    saveMessage('ai', answer);
-                }
-            }, 10);
+        // --- 6. UI HELPERS ---
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            sb.classList.toggle('-translate-x-full');
         }
 
-        function appendMessage(role, content) {
-            const div = document.createElement('div');
-            div.className = `flex w-full mb-6 ${role === 'user' ? 'justify-end' : 'justify-start'}`;
-            const bubble = document.createElement('div');
-            bubble.className = `max-w-[85%] rounded-2xl p-4 shadow-sm ${role === 'user' ? 'bg-brand-600 text-white' : 'bg-white dark:bg-dark-surface border dark:border-gray-700 prose dark:prose-invert'}`;
-            bubble.innerHTML = role === 'user' ? content : marked.parse(content);
-            div.appendChild(bubble);
-            els.msgContainer.appendChild(div);
-            els.msgContainer.scrollTop = els.msgContainer.scrollHeight;
+        function showAuth() {
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('app-ui').classList.add('hidden');
         }
 
-        function saveMessage(role, content) {
-            if (currentChatId) db.ref(`chats/${currentChatId}/messages`).push({ role, content, timestamp: firebase.database.ServerValue.TIMESTAMP });
+        function showApp() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-ui').classList.remove('hidden');
+            document.getElementById('app-ui').classList.add('opacity-100');
+            initCanvas();
+            drawCanvas();
         }
 
-        function loadHistory() {
-            db.ref('chats').orderByChild('userId').equalTo(currentUser.uid).on('value', (snapshot) => {
-                els.historyList.innerHTML = '';
-                const chats = [];
-                snapshot.forEach(c => chats.push({k: c.key, ...c.val()}));
-                chats.reverse().forEach(chat => {
-                    const btn = document.createElement('button');
-                    btn.className = "w-full text-left p-3 rounded-lg text-sm mb-1 hover:bg-gray-200 dark:hover:bg-gray-700 truncate";
-                    btn.innerHTML = `<i class="ri-message-3-line mr-2"></i> ${chat.title}`;
-                    btn.onclick = () => loadChat(chat.k);
-                    els.historyList.appendChild(btn);
-                });
-            });
+        function openSettings() {
+            const overlay = document.getElementById('modal-overlay');
+            const content = document.getElementById('modal-content');
+            document.getElementById('modal-title').innerText = "User Settings";
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400">System Prompt</label>
+                        <textarea id="sys-prompt" class="w-full bg-zinc-900 border border-zinc-700 p-2 rounded mt-1" placeholder="Define AI behavior..."></textarea>
+                    </div>
+                    <button onclick="saveSystemPrompt()" class="bg-red-700 px-4 py-2 rounded">Save Preferences</button>
+                    <hr class="border-zinc-800">
+                    <button onclick="openReportModal()" class="text-yellow-500 underline">Report a Bug/Response</button>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
         }
 
-        function loadChat(chatId) {
-            currentChatId = chatId;
-            els.msgContainer.innerHTML = '';
-            document.getElementById('welcome-screen').classList.add('hidden');
-            db.ref(`chats/${chatId}/messages`).once('value', snap => {
-                snap.forEach(c => appendMessage(c.val().role, c.val().content));
-            });
-            // Mobile close
-            if(window.innerWidth < 768) els.sidebar.classList.add('-translate-x-full');
+        function openAdminPanel() {
+            if(!isAdmin) return;
+            const overlay = document.getElementById('modal-overlay');
+            const content = document.getElementById('modal-content');
+            document.getElementById('modal-title').innerText = "Admin Special Grade Command";
+            
+            content.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 border border-zinc-700 rounded bg-black">
+                        <h3 class="font-bold text-red-500 mb-2">Model Management</h3>
+                        <button class="w-full text-left p-2 hover:bg-zinc-800 text-sm">Add New Model (v2, v3)</button>
+                        <button class="w-full text-left p-2 hover:bg-zinc-800 text-sm">Set Expiry Rules</button>
+                    </div>
+                    <div class="p-4 border border-zinc-700 rounded bg-black">
+                        <h3 class="font-bold text-red-500 mb-2">User History</h3>
+                        <button class="w-full text-left p-2 hover:bg-zinc-800 text-sm">View All User Logs</button>
+                        <button class="w-full text-left p-2 hover:bg-zinc-800 text-sm">Ban/Unban Users</button>
+                    </div>
+                    <div class="p-4 border border-zinc-700 rounded bg-black">
+                        <h3 class="font-bold text-red-500 mb-2">Reports</h3>
+                        <div id="admin-reports-list" class="text-xs text-gray-400">Loading reports...</div>
+                    </div>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
         }
 
-        // --- 5. ADMIN PANEL LOGIC (FIXED) ---
-        
-        els.adminBtn.onclick = () => {
-            els.adminPanel.classList.remove('hidden');
-            els.settingsMenu.classList.add('hidden');
-            switchAdminTab('training'); // Default tab
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+
+        // Window resize for Canvas
+        window.addEventListener('resize', initCanvas);
+
+        // Auto-focus input
+        window.onload = () => {
+            document.getElementById('userInput').focus();
         };
-
-        document.getElementById('close-admin').onclick = () => els.adminPanel.classList.add('hidden');
-
-        // Global function for onclick events
-        window.switchAdminTab = (tabId) => {
-            // 1. Hide all sections
-            ['training', 'models', 'users', 'reports'].forEach(id => {
-                document.getElementById(`admin-${id}`).classList.add('hidden');
-                const btn = document.getElementById(`tab-btn-${id}`);
-                if(btn) btn.classList.remove('bg-white', 'dark:bg-gray-800', 'shadow-sm'); // Remove active style
-            });
-
-            // 2. Show selected section
-            document.getElementById(`admin-${tabId}`).classList.remove('hidden');
-            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
-            if(activeBtn) activeBtn.classList.add('bg-white', 'dark:bg-gray-800', 'shadow-sm'); // Add active style
-
-            // 3. Load Data
-            if(tabId === 'training') loadAdminTraining();
-            if(tabId === 'models') loadAdminModels();
-            if(tabId === 'users') loadAdminUsers();
-            if(tabId === 'reports') loadAdminReports();
-        };
-
-        // --- ADMIN: Training ---
-        document.getElementById('btn-save-training').onclick = () => {
-            const q = document.getElementById('train-keywords').value;
-            const a = document.getElementById('train-answer').value;
-            if(q && a) {
-                db.ref('training_data').push({question: q, answer: a});
-                document.getElementById('train-keywords').value = '';
-                document.getElementById('train-answer').value = '';
-                loadAdminTraining();
-            }
-        };
-
-        function loadAdminTraining() {
-            db.ref('training_data').limitToLast(20).once('value', snap => {
-                const div = document.getElementById('training-list');
-                div.innerHTML = '';
-                if(!snap.exists()) { div.innerHTML = '<p class="text-gray-400">No data found.</p>'; return; }
-                snap.forEach(c => {
-                    div.innerHTML += `<div class="p-3 bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded text-sm mb-2">
-                        <strong class="text-brand-600">Q:</strong> ${c.val().question}<br>
-                        <strong class="text-green-600">A:</strong> ${c.val().answer.substring(0,50)}...
-                    </div>`;
-                });
-            });
-        }
-
-        // --- ADMIN: Users ---
-        function loadAdminUsers() {
-            db.ref('users').once('value', snap => {
-                const tbody = document.getElementById('users-list');
-                tbody.innerHTML = '';
-                snap.forEach(c => {
-                    const u = c.val();
-                    const uid = c.key;
-                    const row = document.createElement('tr');
-                    row.className = "border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800";
-                    row.innerHTML = `
-                        <td class="p-3 font-mono text-xs text-gray-700 dark:text-gray-300">${u.email}</td>
-                        <td class="p-3"><span class="px-2 py-1 rounded text-xs ${u.role==='admin'?'bg-purple-100 text-purple-600':'bg-blue-100 text-blue-600'}">${u.role}</span></td>
-                        <td class="p-3">${u.isBanned ? '<span class="text-red-500 font-bold">Banned</span>' : '<span class="text-green-500">Active</span>'}</td>
-                        <td class="p-3">
-                            ${u.role !== 'admin' ? `<button onclick="toggleBan('${uid}', ${!u.isBanned})" class="text-xs px-2 py-1 border rounded hover:bg-red-50 text-red-600">${u.isBanned ? 'Unban' : 'Ban'}</button>` : ''}
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            });
-        }
-
-        window.toggleBan = (uid, status) => {
-            db.ref(`users/${uid}/isBanned`).set(status);
-            loadAdminUsers(); // Reload list
-        };
-
-        // --- ADMIN: Models ---
-        document.getElementById('btn-add-model').onclick = () => {
-            const name = document.getElementById('model-name').value;
-            const access = document.getElementById('model-access').value;
-            if(name) {
-                db.ref('models').push({name, access});
-                alert('Model Created');
-                loadAdminModels();
-            }
-        }
-        function loadAdminModels() {
-            db.ref('models').once('value', snap => {
-                const div = document.getElementById('models-list');
-                div.innerHTML = '';
-                if(!snap.exists()) { div.innerHTML = '<p class="text-gray-400">No models found.</p>'; return; }
-                snap.forEach(c => {
-                    div.innerHTML += `<div class="p-3 bg-white dark:bg-dark-surface border dark:border-gray-700 rounded shadow-sm">
-                        <h4 class="font-bold">${c.val().name}</h4>
-                        <div class="text-xs text-gray-500 mt-1">Access: ${c.val().access}</div>
-                    </div>`;
-                });
-            });
-        }
-
-        // --- ADMIN: Reports ---
-        function loadAdminReports() {
-             db.ref('reports').once('value', snap => {
-                const div = document.getElementById('reports-list');
-                div.innerHTML = '';
-                if(!snap.exists()) { div.innerHTML = '<p class="text-gray-500">No reports found.</p>'; return; }
-                snap.forEach(c => {
-                    div.innerHTML += `<div class="p-4 bg-white dark:bg-dark-surface border dark:border-gray-700 rounded shadow-sm">
-                        <p class="text-sm font-bold text-red-500">Report</p>
-                        <p class="text-xs text-gray-600 dark:text-gray-300 mt-1">${c.val().reason || 'No reason provided'}</p>
-                    </div>`;
-                });
-             });
-        }
-
-        // --- 6. UTILS ---
-        els.newChatBtn.onclick = () => { currentChatId = null; els.msgContainer.innerHTML = ''; document.getElementById('welcome-screen').classList.remove('hidden'); };
-        document.getElementById('btn-logout').onclick = () => auth.signOut();
-        document.getElementById('btn-theme').onclick = () => { document.documentElement.classList.toggle('dark'); };
-        els.mobileMenuBtn.onclick = () => els.sidebar.classList.remove('-translate-x-full');
-        els.closeSidebarBtn.onclick = () => els.sidebar.classList.add('-translate-x-full');
-        els.userProfile.onclick = (e) => { e.stopPropagation(); els.settingsMenu.classList.toggle('hidden'); };
-        document.addEventListener('click', () => els.settingsMenu.classList.add('hidden'));
 
     </script>
 </body>
