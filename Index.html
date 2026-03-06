@@ -1,366 +1,370 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Knowledge Pro</title>
     
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS (Zero Build) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#10a37f',
-                        darkBg: '#1e1e2e',
-                        darkSurface: '#2a2b3d'
-                    }
-                }
-            }
+            theme: { extend: { colors: { primary: '#10a37f' } } }
         }
     </script>
-    
-    <!-- Marked for Markdown -->
+
+    <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        /* Base Styles & Overrides */
+        /* Base styles and mobile safe areas */
+        :root {
+            --dynamic-bg: none;
+            --dynamic-btn: #10a37f;
+        }
         body {
-            -webkit-tap-highlight-color: transparent;
+            background-image: var(--dynamic-bg);
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
-            transition: background-color 0.3s, color 0.3s;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
         
-        /* Markdown formatting */
-        .markdown-body pre {
-            background-color: #1e1e1e !important;
-            color: #d4d4d4 !important;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            overflow-x: auto;
-            margin-top: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
+        .dynamic-btn { background-color: var(--dynamic-btn) !important; }
+        
+        /* Markdown Styles */
+        .markdown-body pre { background: #1e1e1e; color: #fff; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
+        .markdown-body code { font-family: monospace; background: rgba(128,128,128,0.2); padding: 0.1rem 0.3rem; border-radius: 0.2rem; }
         .markdown-body p { margin-bottom: 0.5rem; }
-        .markdown-body code {
-            background: rgba(128,128,128,0.2);
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: monospace;
-            font-size: 0.9em;
-        }
+        .markdown-body ul { list-style-type: disc; margin-left: 1.5rem; }
+        .markdown-body ol { list-style-type: decimal; margin-left: 1.5rem; }
 
-        /* Typing cursor animation */
-        .typing-cursor::after {
-            content: '▋';
-            display: inline-block;
-            animation: blink 1s step-end infinite;
-            margin-left: 2px;
-            color: #10a37f;
-        }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.3); border-radius: 10px; }
 
-        /* Scrollbar hiding */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Modals */
-        .modal-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+        /* Loading Spinner */
+        #loading {
+            position: fixed; inset: 0; background: #ffffff; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .dark #loading { background: #111827; color: white; }
+        .spinner {
+            border: 4px solid rgba(0,0,0,0.1); width: 40px; height: 40px;
+            border-radius: 50%; border-left-color: #10a37f; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Blinking cursor for typing */
+        .typing-cursor::after { content: '▋'; animation: blink 1s step-start infinite; color: var(--dynamic-btn); }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="h-[100dvh] w-full flex flex-col bg-white dark:bg-darkBg text-gray-800 dark:text-gray-100 relative text-sm md:text-base overflow-hidden">
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
 
-    <!-- Loading Fallback -->
-    <div id="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white dark:bg-darkBg transition-opacity duration-500">
-        <div class="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-        <h2 class="text-xl font-semibold">Loading Knowledge Pro...</h2>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div class="spinner mb-4"></div>
+        <div class="text-xl font-semibold tracking-wide">Knowledge Pro</div>
+        <div class="text-sm text-gray-500 mt-2">Initializing System...</div>
     </div>
 
     <!-- Announcement Banner -->
-    <div id="announcement-banner" class="hidden w-full bg-blue-600 text-white p-3 flex justify-between items-center z-50 flex-shrink-0">
-        <div class="flex-grow text-center">
+    <div id="announcement-banner" class="hidden w-full bg-blue-600 text-white p-3 shadow-md z-50 flex justify-between items-center relative">
+        <div>
             <h3 id="ann-header" class="font-bold text-lg"></h3>
             <p id="ann-content" class="text-sm"></p>
         </div>
-        <button onclick="closeAnnouncement()" class="ml-4 p-2 hover:bg-blue-700 rounded-full transition"><i class="fas fa-times"></i></button>
+        <button onclick="dismissAnnouncement()" class="text-white hover:text-gray-200 p-2"><i class="fas fa-times"></i></button>
     </div>
 
-    <!-- Authentication Screen -->
-    <div id="auth-screen" class="hidden flex-grow flex items-center justify-center p-4 relative z-10 overflow-y-auto">
-        <div class="bg-white dark:bg-darkSurface p-8 rounded-2xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-700">
-            <div class="text-center mb-8">
-                <i class="fas fa-brain text-5xl text-blue-600 mb-4"></i>
-                <h1 class="text-3xl font-bold">Knowledge Pro</h1>
-                <p class="text-gray-500 dark:text-gray-400 mt-2">Sign in or register to chat</p>
-            </div>
-            <form id="auth-form" class="space-y-5">
-                <div>
-                    <input type="email" id="auth-email" placeholder="Email Address" required class="w-full p-3.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition">
-                </div>
-                <div>
-                    <input type="password" id="auth-pass" placeholder="Password" required minlength="6" class="w-full p-3.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none transition">
-                </div>
-                <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-lg flex justify-center items-center">
-                    <span>Continue</span>
-                    <i id="auth-spinner" class="fas fa-circle-notch fa-spin ml-2 hidden"></i>
-                </button>
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="hidden min-h-[100dvh] flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 z-50 relative">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md">
+            <h2 class="text-3xl font-bold mb-6 text-center text-gray-900 dark:text-white">Knowledge <span class="text-primary">Pro</span></h2>
+            
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-4 block">
+                <h3 class="text-xl font-semibold mb-2">Sign In</h3>
+                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border rounded dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border rounded dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                <button type="submit" class="w-full p-3 rounded text-white font-bold dynamic-btn shadow-md hover:opacity-90 transition">Login</button>
+                <p class="text-center text-sm text-gray-500 mt-4">Don't have an account? <a href="#" onclick="toggleAuth('signup')" class="text-primary hover:underline">Sign up</a></p>
             </form>
-            <div id="auth-error" class="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mt-4 text-center hidden border border-red-200 dark:border-red-800"></div>
+
+            <!-- Signup Form -->
+            <form id="signup-form" class="space-y-4 hidden">
+                <h3 class="text-xl font-semibold mb-2">Create Account</h3>
+                <input type="email" id="signup-email" placeholder="Email" class="w-full p-3 border rounded dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                <input type="password" id="signup-password" placeholder="Password (min 6 chars)" class="w-full p-3 border rounded dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                <button type="submit" class="w-full p-3 rounded text-white font-bold dynamic-btn shadow-md hover:opacity-90 transition">Sign Up</button>
+                <p class="text-center text-sm text-gray-500 mt-4">Already have an account? <a href="#" onclick="toggleAuth('login')" class="text-primary hover:underline">Login</a></p>
+            </form>
+            <div id="auth-error" class="mt-4 text-red-500 text-sm text-center font-semibold hidden"></div>
         </div>
     </div>
 
-    <!-- Main Application UI -->
-    <div id="app-screen" class="hidden flex-grow flex w-full relative overflow-hidden h-full">
+    <!-- Main App Container -->
+    <div id="app-screen" class="hidden flex-1 flex flex-col md:flex-row min-h-[100dvh] relative overflow-hidden">
         
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden" onclick="toggleSidebar()"></div>
+
         <!-- Sidebar -->
-        <div id="sidebar" class="absolute md:static inset-y-0 left-0 z-40 w-72 h-full bg-gray-50 dark:bg-darkSurface border-r border-gray-200 dark:border-gray-700 transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col flex-shrink-0">
-            <div class="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                <button onclick="createNewChat()" class="flex-grow flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 rounded-xl transition shadow-md">
+        <div id="sidebar" class="fixed md:relative z-50 w-72 h-[100dvh] bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform transform -translate-x-full md:translate-x-0">
+            <!-- Sidebar Header -->
+            <div class="p-4 flex items-center justify-between border-b dark:border-gray-700">
+                <button onclick="createNewChat()" class="flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-800 transition shadow-sm font-semibold">
                     <i class="fas fa-plus"></i> New Chat
                 </button>
-                <button onclick="toggleSidebar()" class="md:hidden ml-3 p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg">
-                    <i class="fas fa-times text-xl"></i>
+                <button onclick="toggleSidebar()" class="ml-2 md:hidden p-3 text-gray-500 hover:text-gray-800 dark:hover:text-white">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
             
-            <div class="flex-grow overflow-y-auto no-scrollbar p-3 space-y-1" id="chat-list">
-                <!-- Chat List Items -->
+            <!-- Chat List -->
+            <div id="chat-list" class="flex-1 overflow-y-auto p-2 space-y-1 hide-scrollbar">
+                <!-- Dynamically injected -->
             </div>
 
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-1 bg-gray-50 dark:bg-darkSurface">
-                <button onclick="openSystemPrompt()" class="flex items-center gap-3 p-2.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-left transition w-full">
-                    <i class="fas fa-terminal w-5 text-center text-gray-500 dark:text-gray-400"></i> System Prompt
-                </button>
-                <button onclick="toggleTheme()" class="flex items-center gap-3 p-2.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl text-left transition w-full">
-                    <i class="fas fa-moon w-5 text-center text-gray-500 dark:text-gray-400" id="theme-icon"></i> Theme Toggle
-                </button>
-                <div id="admin-btn-container" class="hidden">
-                    <button onclick="openAdminPanel()" class="flex items-center gap-3 p-2.5 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-left transition w-full font-medium">
-                        <i class="fas fa-shield-halved w-5 text-center"></i> Admin Panel
-                    </button>
+            <!-- Sidebar Footer (User / Settings) -->
+            <div class="p-4 border-t dark:border-gray-700 space-y-2 bg-white dark:bg-gray-800">
+                <div class="flex items-center gap-2 px-2 py-1 mb-2">
+                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold"><i class="fas fa-user"></i></div>
+                    <div class="flex-1 truncate font-medium text-sm" id="user-display-email">User</div>
+                    <i id="admin-badge" class="fas fa-check-circle text-red-500 hidden" title="Admin"></i>
                 </div>
-                <div class="flex items-center gap-3 p-2 mt-2 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0" id="user-avatar">U</div>
-                    <div class="flex-grow truncate text-sm font-semibold" id="user-display-name">User</div>
-                    <button onclick="logout()" class="p-2 text-gray-500 hover:text-red-500 transition" title="Log Out"><i class="fas fa-sign-out-alt"></i></button>
-                </div>
+                
+                <button onclick="openModal('settings-modal')" class="w-full text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-3 transition">
+                    <i class="fas fa-cog text-gray-500"></i> Settings
+                </button>
+                <button id="admin-panel-btn" onclick="openModal('admin-modal')" class="hidden w-full text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-3 transition text-red-500">
+                    <i class="fas fa-shield-alt"></i> Admin Panel
+                </button>
+                <button onclick="logout()" class="w-full text-left p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-3 transition text-red-400">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </div>
 
-        <!-- Sidebar Overlay (Mobile) -->
-        <div id="sidebar-overlay" onclick="toggleSidebar()" class="absolute inset-0 bg-black/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
-
         <!-- Main Chat Area -->
-        <div class="flex-grow flex flex-col relative w-full h-full bg-white/90 dark:bg-darkBg/90 backdrop-blur-md">
+        <div class="flex-1 flex flex-col h-[100dvh] bg-white dark:bg-gray-800/50 backdrop-blur-sm relative w-full">
             
-            <!-- Chat Header -->
-            <header class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-darkSurface shadow-sm z-20 flex-shrink-0">
-                <div class="flex items-center gap-3">
-                    <button onclick="toggleSidebar()" class="md:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-                        <i class="fas fa-bars text-xl"></i>
-                    </button>
-                    <select id="model-selector" class="bg-transparent text-lg font-bold outline-none cursor-pointer dark:text-white border-none focus:ring-0">
-                        <option value="default">Gemini Pro</option>
+            <!-- Topbar (Mobile mainly) -->
+            <div class="h-14 border-b dark:border-gray-700 flex items-center px-4 justify-between bg-white dark:bg-gray-900 z-10 sticky top-0">
+                <button onclick="toggleSidebar()" class="md:hidden text-gray-500 hover:text-gray-800 dark:hover:text-white text-xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="font-semibold text-lg flex items-center gap-2">
+                    Knowledge <span class="text-primary">Pro</span>
+                    <select id="model-selector" class="ml-2 text-sm bg-gray-100 dark:bg-gray-700 border-none rounded p-1 outline-none font-normal cursor-pointer">
+                        <option value="default">Default Model</option>
                     </select>
                 </div>
-                <div id="chat-actions" class="hidden flex gap-1">
-                    <button onclick="renameCurrentChat()" class="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition" title="Rename Chat"><i class="fas fa-pen"></i></button>
-                    <button onclick="deleteCurrentChat()" class="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition" title="Delete Chat"><i class="fas fa-trash"></i></button>
+                <div class="flex gap-4">
+                    <button onclick="toggleDarkMode()" class="text-gray-500 hover:text-gray-800 dark:hover:text-white">
+                        <i class="fas fa-moon" id="theme-icon"></i>
+                    </button>
                 </div>
-            </header>
+            </div>
 
-            <!-- Chat Messages Container -->
-            <div id="messages-container" class="flex-grow overflow-y-auto p-4 md:p-6 space-y-6 w-full max-w-4xl mx-auto no-scrollbar relative">
-                
-                <!-- Welcome UI -->
-                <div id="welcome-screen" class="absolute inset-0 flex flex-col items-center justify-center text-center opacity-60 p-4">
-                    <div class="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-sparkles text-4xl text-blue-600 dark:text-blue-400"></i>
-                    </div>
-                    <h2 class="text-3xl font-bold mb-2">How can I help you today?</h2>
-                    <p class="text-gray-600 dark:text-gray-400 max-w-md">Select a model from the top left and type your message below to begin.</p>
+            <!-- Messages Area -->
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 pb-32 w-full max-w-4xl mx-auto scroll-smooth">
+                <div class="flex h-full items-center justify-center text-center text-gray-500 flex-col opacity-50">
+                    <i class="fas fa-brain text-6xl mb-4 text-primary"></i>
+                    <h2 class="text-2xl font-bold">How can I help you today?</h2>
+                    <p class="text-sm mt-2">Select a model or start typing.</p>
                 </div>
-
-                <!-- Messages will be injected here -->
-                <div id="messages-list" class="space-y-6 pb-4"></div>
             </div>
 
             <!-- Input Area -->
-            <div class="flex-shrink-0 bg-white dark:bg-darkBg border-t border-gray-200 dark:border-gray-700 p-4 pt-3 pb-6 md:pb-4 w-full z-20">
-                <div class="max-w-4xl mx-auto relative bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-600 flex items-end overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
-                    <textarea id="message-input" rows="1" placeholder="Message Knowledge Pro..." class="w-full max-h-40 bg-transparent border-none outline-none resize-none px-4 py-3.5 text-gray-800 dark:text-gray-100 placeholder-gray-500 no-scrollbar" style="min-height: 52px;"></textarea>
-                    <button id="send-btn" onclick="sendMessage()" class="p-3.5 text-blue-600 dark:text-blue-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed m-1 rounded-xl">
-                        <i class="fas fa-paper-plane text-lg"></i>
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 w-full max-w-4xl mx-auto z-20">
+                <div class="relative flex items-center bg-gray-100 dark:bg-gray-700 border dark:border-gray-600 rounded-2xl shadow-lg focus-within:ring-2 focus-within:ring-primary transition-all p-2">
+                    <textarea id="chat-input" rows="1" class="w-full bg-transparent border-none focus:outline-none resize-none px-4 py-2 max-h-32 hide-scrollbar" placeholder="Message Knowledge Pro..."></textarea>
+                    <button id="send-btn" onclick="handleSend()" class="absolute right-3 bottom-3 p-2 rounded-full dynamic-btn text-white w-10 h-10 flex items-center justify-center hover:opacity-90 disabled:opacity-50 transition">
+                        <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
-                <div class="text-center mt-2 text-xs text-gray-500 dark:text-gray-400">Knowledge Pro may display inaccurate info. Verify important details.</div>
-            </div>
-            
-            <!-- Banned Overlay -->
-            <div id="banned-overlay" class="hidden absolute inset-0 z-50 bg-white/95 dark:bg-darkBg/95 flex flex-col items-center justify-center backdrop-blur-md text-center p-6">
-                <i class="fas fa-ban text-red-600 text-7xl mb-4"></i>
-                <h2 class="text-4xl font-extrabold text-red-600 mb-3">You are Banned</h2>
-                <p class="text-gray-600 dark:text-gray-300 text-lg mb-8 max-w-md">Your account has been restricted by an administrator. You can no longer access the application.</p>
-                <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl transition shadow-lg">Sign Out</button>
-            </div>
-            
-            <!-- Deleted Chat Overlay -->
-            <div id="deleted-chat-overlay" class="hidden absolute inset-0 z-30 bg-white/90 dark:bg-darkBg/90 flex flex-col items-center justify-center backdrop-blur-md text-center p-6">
-                <i class="fas fa-triangle-exclamation text-yellow-500 text-6xl mb-4"></i>
-                <h2 class="text-3xl font-bold mb-2">Chat Unavailable</h2>
-                <p class="text-gray-600 dark:text-gray-300 text-lg mb-6">This chat was deleted by an administrator.</p>
-                <button onclick="createNewChat()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition">Start New Chat</button>
+                <div class="text-center text-xs text-gray-400 mt-2">Knowledge Pro can make mistakes. Verify important info.</div>
             </div>
         </div>
     </div>
 
-    <!-- Admin Panel Modal -->
-    <div id="admin-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 modal-overlay">
-        <div class="bg-white dark:bg-darkSurface w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
-                <h2 class="text-2xl font-bold text-red-600 flex items-center gap-2"><i class="fas fa-shield-halved"></i> Admin Control Center</h2>
-                <button onclick="closeAdminPanel()" class="text-gray-500 hover:text-gray-800 dark:hover:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 w-8 h-8 rounded-full transition flex items-center justify-center"><i class="fas fa-times"></i></button>
+    <!-- Modals Overlay -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+        
+        <!-- Settings Modal (User) -->
+        <div id="settings-modal" class="hidden bg-white dark:bg-gray-800 w-full max-w-lg rounded-xl shadow-2xl flex flex-col max-h-[90dvh]">
+            <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Settings</h2>
+                <button onclick="closeModals()" class="text-gray-500 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-6">
+                <div>
+                    <label class="block font-semibold mb-2">System Prompt (Local)</label>
+                    <textarea id="user-system-prompt" class="w-full p-3 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-primary" rows="3" placeholder="You are a helpful assistant..."></textarea>
+                    <button onclick="saveSystemPrompt()" class="mt-2 px-4 py-2 dynamic-btn text-white rounded text-sm">Save Prompt</button>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2">My Data</h3>
+                    <button onclick="deleteAllMyChats()" class="px-4 py-2 bg-red-500 text-white rounded text-sm hover:bg-red-600"><i class="fas fa-trash"></i> Delete All My Chats</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Modal -->
+        <div id="admin-modal" class="hidden bg-white dark:bg-gray-800 w-full max-w-4xl rounded-xl shadow-2xl flex flex-col max-h-[90dvh]">
+            <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900 rounded-t-xl">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-shield-alt text-red-500"></i> Admin Dashboard</h2>
+                <button onclick="closeModals()" class="text-gray-500 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
             </div>
             
-            <div class="flex flex-grow overflow-hidden flex-col md:flex-row">
-                <!-- Admin Sidebar Tabs -->
-                <div class="w-full md:w-64 border-r border-gray-200 dark:border-gray-700 flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto p-3 gap-2 bg-gray-50/50 dark:bg-darkBg/50 flex-shrink-0">
-                    <button onclick="switchAdminTab('users')" class="admin-tab w-full text-left px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition font-semibold whitespace-nowrap flex items-center gap-3"><i class="fas fa-users w-5"></i> Users History</button>
-                    <button onclick="switchAdminTab('models')" class="admin-tab w-full text-left px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition font-semibold whitespace-nowrap flex items-center gap-3"><i class="fas fa-robot w-5"></i> Models Engine</button>
-                    <button onclick="switchAdminTab('announcements')" class="admin-tab w-full text-left px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition font-semibold whitespace-nowrap flex items-center gap-3"><i class="fas fa-bullhorn w-5"></i> Announcements</button>
-                    <button onclick="switchAdminTab('theme')" class="admin-tab w-full text-left px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition font-semibold whitespace-nowrap flex items-center gap-3"><i class="fas fa-palette w-5"></i> UI Theme</button>
-                    <button onclick="switchAdminTab('firebase')" class="admin-tab w-full text-left px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition font-semibold whitespace-nowrap flex items-center gap-3"><i class="fas fa-database w-5"></i> Firebase Data</button>
+            <div class="flex flex-col md:flex-row flex-1 overflow-hidden">
+                <!-- Admin Sidebar -->
+                <div class="w-full md:w-48 border-b md:border-b-0 md:border-r dark:border-gray-700 flex md:flex-col overflow-x-auto md:overflow-y-auto bg-gray-50 dark:bg-gray-800/50 p-2 gap-1 flex-shrink-0">
+                    <button onclick="switchAdminTab('firebase')" class="admin-tab-btn active p-3 text-left rounded font-medium hover:bg-gray-200 dark:hover:bg-gray-700 truncate"><i class="fas fa-database w-5"></i> Firebase</button>
+                    <button onclick="switchAdminTab('train')" class="admin-tab-btn p-3 text-left rounded font-medium hover:bg-gray-200 dark:hover:bg-gray-700 truncate"><i class="fas fa-brain w-5"></i> Train Data</button>
+                    <button onclick="switchAdminTab('models')" class="admin-tab-btn p-3 text-left rounded font-medium hover:bg-gray-200 dark:hover:bg-gray-700 truncate"><i class="fas fa-robot w-5"></i> Models</button>
+                    <button onclick="switchAdminTab('users')" class="admin-tab-btn p-3 text-left rounded font-medium hover:bg-gray-200 dark:hover:bg-gray-700 truncate"><i class="fas fa-users w-5"></i> Users History</button>
+                    <button onclick="switchAdminTab('announcement')" class="admin-tab-btn p-3 text-left rounded font-medium hover:bg-gray-200 dark:hover:bg-gray-700 truncate"><i class="fas fa-bullhorn w-5"></i> Announcement</button>
+                    <button onclick="switchAdminTab('theme')" class="admin-tab-btn p-3 text-left rounded font-medium hover:bg-gray-200 dark:hover:bg-gray-700 truncate"><i class="fas fa-palette w-5"></i> Theme</button>
                 </div>
                 
-                <!-- Admin Content Area -->
-                <div class="flex-grow p-4 md:p-6 overflow-y-auto no-scrollbar relative bg-white dark:bg-darkSurface">
+                <!-- Admin Content -->
+                <div class="flex-1 p-6 overflow-y-auto relative">
                     
-                    <!-- 1. Users Tab -->
-                    <div id="admin-tab-users" class="admin-content hidden space-y-4">
-                        <h3 class="text-xl font-bold border-b pb-2 mb-4 dark:border-gray-700">User Management</h3>
-                        <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl mb-4 border border-blue-100 dark:border-blue-800">
-                            <p class="text-sm text-blue-800 dark:text-blue-300"><i class="fas fa-info-circle mr-1"></i> Admin accounts cannot be banned. Wipe history deletes all chats for that specific user.</p>
+                    <!-- Firebase Tab -->
+                    <div id="tab-firebase" class="admin-tab-content space-y-4">
+                        <h3 class="text-lg font-bold border-b pb-2 dark:border-gray-700">Firebase Configuration overrides</h3>
+                        <p class="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded">
+                            Warning: Changing these requires a page reload. App uses default values if left blank. Stored in localStorage.
+                        </p>
+                        <textarea id="admin-fb-config" rows="8" class="w-full p-3 font-mono text-sm border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-primary" placeholder='{"apiKey": "..."}'></textarea>
+                        <button onclick="saveFirebaseConfig()" class="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700">Save & Reload App</button>
+                        <button onclick="resetFirebaseConfig()" class="px-4 py-2 bg-gray-500 text-white rounded font-bold hover:bg-gray-600 ml-2">Reset to Default</button>
+                    </div>
+
+                    <!-- Train Data Tab -->
+                    <div id="tab-train" class="admin-tab-content hidden space-y-4">
+                        <h3 class="text-lg font-bold border-b pb-2 dark:border-gray-700">AI Training Data</h3>
+                        <p class="text-sm text-gray-500">Format: JSON Array `[{"q": "trigger word", "a": "response"}]`</p>
+                        <textarea id="admin-train-data" rows="10" class="w-full p-3 font-mono text-sm border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-primary" placeholder='[{"q":"hello", "a":"Hi there!"}]'></textarea>
+                        <div class="flex gap-2">
+                            <button onclick="saveTrainData()" class="px-4 py-2 dynamic-btn text-white rounded font-bold hover:opacity-90">Save Training Data</button>
                         </div>
-                        <div id="admin-users-list" class="space-y-3"></div>
                     </div>
-                    
-                    <!-- 2. Models Tab -->
-                    <div id="admin-tab-models" class="admin-content hidden space-y-4">
-                        <h3 class="text-xl font-bold border-b pb-2 mb-4 dark:border-gray-700">Create & Train Models</h3>
-                        <form id="model-form" class="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label class="block text-sm font-semibold mb-1">Model Name</label><input type="text" id="m-name" required placeholder="e.g. FinanceBot" class="w-full p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none focus:border-blue-500"></div>
-                                <div><label class="block text-sm font-semibold mb-1">Version</label>
-                                    <select id="m-version" class="w-full p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none">
-                                        <option value="v1">v1 (Standard)</option><option value="v2">v2 (Advanced)</option><option value="v3">v3 (Experimental)</option>
-                                    </select>
-                                </div>
-                                <div><label class="block text-sm font-semibold mb-1">Access Level</label>
-                                    <select id="m-free" class="w-full p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none">
-                                        <option value="true">Free (All Users)</option><option value="false">Pro (Admins Only)</option>
-                                    </select>
-                                </div>
-                                <div><label class="block text-sm font-semibold mb-1">Lifespan / Expiry</label>
-                                    <select id="m-expiry" class="w-full p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none">
-                                        <option value="never">Never Expires</option><option value="1">1 Day</option><option value="4">4 Days</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold mb-1">Training Dataset (JSON key-value pairs)</label>
-                                <textarea id="m-data" rows="6" class="w-full p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-mono text-sm outline-none focus:border-blue-500" placeholder='{
-  "What is Knowledge Pro?": "It is an advanced AI system...",
-  "hello": "Hi there! How can I help?"
-}'></textarea>
-                            </div>
-                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow-md"><i class="fas fa-upload mr-2"></i> Deploy Model</button>
-                        </form>
-                        <h4 class="font-bold mt-6 mb-2">Active Models</h4>
-                        <div id="admin-models-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                    </div>
-                    
-                    <!-- 3. Announcements Tab -->
-                    <div id="admin-tab-announcements" class="admin-content hidden space-y-4">
-                        <h3 class="text-xl font-bold border-b pb-2 mb-4 dark:border-gray-700">Broadcast Announcement</h3>
-                        <form id="ann-form" class="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
-                            <div><label class="block text-sm font-semibold mb-1">Internal Reference Name</label><input type="text" id="a-name" required class="w-full p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none focus:border-blue-500"></div>
-                            <div><label class="block text-sm font-semibold mb-1">Header Title (Visible to Users)</label><input type="text" id="a-header" required placeholder="e.g. System Maintenance" class="w-full p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none focus:border-blue-500"></div>
-                            <div><label class="block text-sm font-semibold mb-1">Message Content</label><textarea id="a-content" required rows="3" class="w-full p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none focus:border-blue-500"></textarea></div>
-                            <div><label class="block text-sm font-semibold mb-1">Auto-Remove After</label>
-                                <select id="a-expiry" class="w-full p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none">
-                                    <option value="never">Never (Manual Removal)</option><option value="1">1 Day</option><option value="7">7 Days</option>
+
+                    <!-- Models Tab -->
+                    <div id="tab-models" class="admin-tab-content hidden space-y-6">
+                        <h3 class="text-lg font-bold border-b pb-2 dark:border-gray-700">Create / Manage Models</h3>
+                        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-3">
+                            <input type="text" id="model-id" placeholder="Model ID (e.g. v1, v2)" class="w-full p-2 border rounded dark:bg-gray-600 dark:border-gray-500">
+                            <input type="text" id="model-name" placeholder="Display Name (e.g. GPT-Pro)" class="w-full p-2 border rounded dark:bg-gray-600 dark:border-gray-500">
+                            <div class="flex gap-4">
+                                <select id="model-access" class="p-2 border rounded w-1/2 dark:bg-gray-600 dark:border-gray-500">
+                                    <option value="free">Free</option>
+                                    <option value="pro">Pro Only</option>
+                                </select>
+                                <select id="model-expiry" class="p-2 border rounded w-1/2 dark:bg-gray-600 dark:border-gray-500">
+                                    <option value="never">Never Expires</option>
+                                    <option value="1d">1 Day</option>
+                                    <option value="7d">7 Days</option>
                                 </select>
                             </div>
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow-md"><i class="fas fa-paper-plane mr-2"></i> Publish Announcement</button>
-                        </form>
-                    </div>
-                    
-                    <!-- 4. Theme Tab -->
-                    <div id="admin-tab-theme" class="admin-content hidden space-y-4">
-                        <h3 class="text-xl font-bold border-b pb-2 mb-4 dark:border-gray-700">Global Website Theme</h3>
-                        <form id="theme-form" class="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
-                            <div><label class="block text-sm font-semibold mb-1">Background Image / GIF URL</label>
-                                <input type="url" id="t-bg" placeholder="https://example.com/background.gif" class="w-full p-2.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 outline-none focus:border-purple-500">
-                                <p class="text-xs text-gray-500 mt-2"><i class="fas fa-info-circle"></i> This visual background will apply to ALL users globally. Leave empty to revert to standard colors.</p>
-                            </div>
-                            <div class="flex gap-3">
-                                <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow-md">Apply Theme</button>
-                                <button type="button" onclick="clearTheme()" class="bg-red-100 text-red-700 hover:bg-red-200 font-bold px-6 py-2.5 rounded-lg transition">Clear Theme</button>
-                            </div>
-                        </form>
-                    </div>
-                    
-                    <!-- 5. Firebase Details Tab -->
-                    <div id="admin-tab-firebase" class="admin-content hidden space-y-4">
-                        <h3 class="text-xl font-bold border-b pb-2 mb-4 dark:border-gray-700">Firebase Configuration Metadata</h3>
-                        <div class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl mb-4 border border-yellow-200 dark:border-yellow-800">
-                            <p class="text-sm text-yellow-800 dark:text-yellow-300"><i class="fas fa-triangle-exclamation mr-1"></i> Core App init params are hardcoded per constraints, but you can save supplemental metadata / backend JSON strings here for reference or extensions.</p>
+                            <button onclick="createModel()" class="px-4 py-2 dynamic-btn text-white rounded font-bold w-full">Create / Update Model</button>
                         </div>
-                        <form id="fb-form" class="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-700">
-                            <div><label class="block text-sm font-semibold mb-1">Firebase Details JSON Config</label>
-                                <textarea id="fb-details" rows="8" class="w-full p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-mono text-sm outline-none focus:border-yellow-500" placeholder='{
-  "apiKey": "AIzaSy...",
-  "authDomain": "...",
-  "projectId": "..."
-}'></textarea>
-                            </div>
-                            <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow-md"><i class="fas fa-save mr-2"></i> Save Meta Details</button>
-                        </form>
+                        <div>
+                            <h4 class="font-semibold mb-2">Active Models</h4>
+                            <div id="models-list" class="space-y-2"></div>
+                        </div>
                     </div>
+
+                    <!-- Users History Tab -->
+                    <div id="tab-users" class="admin-tab-content hidden space-y-4">
+                        <h3 class="text-lg font-bold border-b pb-2 dark:border-gray-700">User Management</h3>
+                        <div class="flex items-center gap-2 mb-4">
+                            <input type="text" id="search-user" placeholder="Search Email..." class="flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600" oninput="renderUsersList()">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100 dark:bg-gray-700">
+                                        <th class="p-2 border dark:border-gray-600">Email</th>
+                                        <th class="p-2 border dark:border-gray-600">Role</th>
+                                        <th class="p-2 border dark:border-gray-600">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                    <!-- Injected -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <hr class="dark:border-gray-700 my-4">
+                        <h4 class="font-bold">Inspect User Chats</h4>
+                        <div id="user-chats-inspector" class="bg-gray-50 dark:bg-gray-700 p-4 rounded min-h-[100px] text-sm overflow-y-auto max-h-64">
+                            Select a user to view history.
+                        </div>
+                    </div>
+
+                    <!-- Announcement Tab -->
+                    <div id="tab-announcement" class="admin-tab-content hidden space-y-4">
+                        <h3 class="text-lg font-bold border-b pb-2 dark:border-gray-700">Global Announcement</h3>
+                        <input type="text" id="ann-input-name" placeholder="Internal Name" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                        <input type="text" id="ann-input-header" placeholder="Headline" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                        <textarea id="ann-input-content" rows="3" placeholder="Message content..." class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"></textarea>
+                        <select id="ann-input-expiry" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                            <option value="never">Never Expire</option>
+                            <option value="1">1 Day</option>
+                            <option value="3">3 Days</option>
+                        </select>
+                        <button onclick="createAnnouncement()" class="px-4 py-2 dynamic-btn text-white rounded font-bold w-full">Publish Announcement</button>
+                        <button onclick="clearAnnouncement()" class="px-4 py-2 bg-red-500 text-white rounded font-bold w-full mt-2 hover:bg-red-600">Delete Current Announcement</button>
+                    </div>
+
+                    <!-- Theme Tab -->
+                    <div id="tab-theme" class="admin-tab-content hidden space-y-4">
+                        <h3 class="text-lg font-bold border-b pb-2 dark:border-gray-700">Website Theme</h3>
+                        <div>
+                            <label class="block mb-1 text-sm font-semibold">Background Image/GIF URL</label>
+                            <input type="text" id="theme-bg-url" placeholder="https://example.com/bg.gif" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                        </div>
+                        <div>
+                            <label class="block mb-1 text-sm font-semibold">Primary Button Color (Hex)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="theme-color-picker" class="h-10 w-10 border-none bg-transparent cursor-pointer">
+                                <input type="text" id="theme-btn-color" placeholder="#10a37f" class="flex-1 p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                            </div>
+                        </div>
+                        <button onclick="saveTheme()" class="px-4 py-2 dynamic-btn text-white rounded font-bold w-full">Apply Global Theme</button>
+                        <button onclick="resetTheme()" class="px-4 py-2 bg-gray-500 text-white rounded font-bold w-full mt-2 hover:bg-gray-600">Reset Theme</button>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- System Prompt Modal -->
-    <div id="sys-prompt-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
-        <div class="bg-white dark:bg-darkSurface w-full max-w-lg p-6 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 transform transition-all scale-100">
-            <h3 class="text-xl font-bold mb-2 flex items-center gap-2"><i class="fas fa-terminal text-blue-500"></i> System Prompt</h3>
-            <p class="text-sm text-gray-500 mb-4">Define how the AI should behave or format responses. (Stored locally for your session).</p>
-            <textarea id="sys-prompt-input" rows="5" class="w-full p-4 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-blue-500 mb-4 font-mono text-sm" placeholder="e.g. You are a helpful expert software engineer. Always answer in Markdown and provide code examples."></textarea>
-            <div class="flex justify-end gap-3">
-                <button onclick="closeSystemPrompt()" class="px-5 py-2.5 font-semibold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">Cancel</button>
-                <button onclick="saveSystemPrompt()" class="px-5 py-2.5 font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md">Save Rules</button>
-            </div>
-        </div>
-    </div>
+    <!-- ES Module Script (No Build Step) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, set, get, onValue, push, update, remove, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    <!-- Scripts (Firebase Compat v9) at the very end of body -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
-    <script>
         // ==========================================
-        // 1. FIREBASE CONFIGURATION & INIT
+        // 1. FIREBASE SETUP & OVERRIDES
         // ==========================================
-        const firebaseConfig = {
+        const defaultFirebaseConfig = {
             apiKey: "AIzaSyBD473HnZjcmuBlEwd7uaI0MB-hKU4_Nfs",
             authDomain: "knowledge-pro-c9ee5.firebaseapp.com",
             databaseURL: "https://knowledge-pro-c9ee5-default-rtdb.firebaseio.com",
@@ -371,674 +375,626 @@
             measurementId: "G-ZXZC2BH72M"
         };
 
-        try {
-            firebase.initializeApp(firebaseConfig);
-        } catch (err) {
-            console.error("Firebase init error:", err);
+        let firebaseConfig = defaultFirebaseConfig;
+        const storedConfig = localStorage.getItem('kb_firebase_config');
+        if(storedConfig) {
+            try { firebaseConfig = JSON.parse(storedConfig); } catch(e){}
         }
-        
-        const auth = firebase.auth();
-        const db = firebase.database();
 
-        // Global State variables
-        let currentUser = null;
-        let userData = null;
-        let currentChatId = null;
-        let modelsCache = {};
-        let isTyping = false;
-        let currentChatListener = null;
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
 
-        // Cache DOM Elements
-        const DOM = {
-            loading: document.getElementById('loading'),
-            authScreen: document.getElementById('auth-screen'),
-            appScreen: document.getElementById('app-screen'),
-            authForm: document.getElementById('auth-form'),
-            authEmail: document.getElementById('auth-email'),
-            authPass: document.getElementById('auth-pass'),
-            authError: document.getElementById('auth-error'),
-            authSubmitBtn: document.getElementById('auth-submit-btn'),
-            authSpinner: document.getElementById('auth-spinner'),
-            sidebar: document.getElementById('sidebar'),
-            sidebarOverlay: document.getElementById('sidebar-overlay'),
-            chatList: document.getElementById('chat-list'),
-            msgContainer: document.getElementById('messages-container'),
-            msgList: document.getElementById('messages-list'),
-            welcomeScreen: document.getElementById('welcome-screen'),
-            msgInput: document.getElementById('message-input'),
-            sendBtn: document.getElementById('send-btn'),
-            adminBtnContainer: document.getElementById('admin-btn-container'),
-            userDisplayName: document.getElementById('user-display-name'),
-            userAvatar: document.getElementById('user-avatar'),
-            bannedOverlay: document.getElementById('banned-overlay'),
-            deletedChatOverlay: document.getElementById('deleted-chat-overlay'),
-            modelSelector: document.getElementById('model-selector'),
-            chatActions: document.getElementById('chat-actions'),
+        // ==========================================
+        // 2. STATE MANAGEMENT
+        // ==========================================
+        window.AppState = {
+            user: null,
+            userData: null,
+            chats: {},
+            currentChatId: null,
+            allUsers: {},
+            allChats: {}, // For admin
+            trainData: [],
+            models: {},
+            isGenerating: false
         };
 
-        // Theme and Markdown setup
-        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        }
-        marked.setOptions({ breaks: true, gfm: true });
+        // DOM Elements
+        const el = (id) => document.getElementById(id);
+        const els = {
+            loading: el('loading'),
+            auth: el('auth-screen'),
+            app: el('app-screen'),
+            loginForm: el('login-form'),
+            signupForm: el('signup-form'),
+            authErr: el('auth-error'),
+            sidebar: el('sidebar'),
+            sidebarOverlay: el('sidebar-overlay'),
+            chatList: el('chat-list'),
+            msgContainer: el('messages-container'),
+            chatInput: el('chat-input'),
+            sendBtn: el('send-btn'),
+            modalOverlay: el('modal-overlay'),
+            adminModal: el('admin-modal'),
+            settingsModal: el('settings-modal'),
+            modelSelector: el('model-selector')
+        };
 
-        // Input Auto-resize
-        DOM.msgInput.addEventListener('input', function() {
-            this.style.height = '52px'; // Reset to min
-            const newHeight = Math.min(this.scrollHeight, 160); // Max 160px
-            this.style.height = newHeight + 'px';
-            if (this.value.trim().length > 0) {
-                DOM.sendBtn.removeAttribute('disabled');
-            } else {
-                DOM.sendBtn.setAttribute('disabled', 'true');
-            }
-        });
+        // Global functions attachment
+        window.toggleAuth = (type) => {
+            if(type==='login'){ els.loginForm.classList.remove('hidden'); els.signupForm.classList.add('hidden'); }
+            else { els.loginForm.classList.add('hidden'); els.signupForm.classList.remove('hidden'); }
+            els.authErr.classList.add('hidden');
+        };
 
-        // Enter to send (Shift+Enter for newline)
-        DOM.msgInput.addEventListener('keydown', (e) => {
-            if(e.key === 'Enter' && !e.shiftKey) { 
-                e.preventDefault(); 
-                if(!DOM.sendBtn.disabled) sendMessage(); 
-            }
+        window.toggleSidebar = () => {
+            els.sidebar.classList.toggle('-translate-x-full');
+            els.sidebarOverlay.classList.toggle('hidden');
+        };
+
+        window.openModal = (id) => {
+            els.modalOverlay.classList.remove('hidden');
+            els.modalOverlay.classList.add('flex');
+            document.querySelectorAll('#modal-overlay > div').forEach(d => d.classList.add('hidden'));
+            el(id).classList.remove('hidden');
+            el(id).classList.add('flex');
+        };
+
+        window.closeModals = () => {
+            els.modalOverlay.classList.add('hidden');
+            els.modalOverlay.classList.remove('flex');
+        };
+
+        window.toggleDarkMode = () => {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('kb_dark', isDark);
+            el('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+        };
+
+        // Init Dark Mode
+        if(localStorage.getItem('kb_dark') === 'false') toggleDarkMode(); // Default is dark
+
+        // Textarea auto-resize
+        els.chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
         });
 
         // ==========================================
-        // 2. ADVANCED AUTHENTICATION FLOW
+        // 3. AUTHENTICATION LOGIC
         // ==========================================
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                currentUser = user;
-                
-                // Track user role & ban status in RTDB
-                db.ref(`users/${user.uid}`).on('value', snap => {
-                    userData = snap.val();
-                    if (!snap.exists()) {
-                        userData = { email: user.email, role: 'user', isBanned: false, createdAt: Date.now() };
-                        db.ref(`users/${user.uid}`).set(userData);
-                    }
-                    
-                    updateUIForUser();
-                    
-                    // Ban logic checking
-                    if (userData.isBanned) {
-                        DOM.bannedOverlay.classList.remove('hidden');
-                        DOM.msgInput.disabled = true;
-                    } else {
-                        DOM.bannedOverlay.classList.add('hidden');
-                        DOM.msgInput.disabled = false;
-                    }
-                });
-
-                // Initialize App Data
-                loadChats();
-                loadModels();
-                loadGlobalTheme();
-                checkAnnouncements();
-                
-                DOM.authScreen.classList.add('hidden');
-                DOM.appScreen.classList.remove('hidden');
-            } else {
-                // Reset State
-                currentUser = null;
-                userData = null;
-                DOM.authScreen.classList.remove('hidden');
-                DOM.appScreen.classList.add('hidden');
-                db.ref().off(); // Remove all listeners
-            }
-            // Hide Loader cleanly
-            setTimeout(() => DOM.loading.classList.add('hidden'), 500);
-        });
-
-        // Custom Login / Auto-Register handler solving auth/invalid-login-credentials
-        DOM.authForm.addEventListener('submit', async (e) => {
+        els.loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = DOM.authEmail.value.trim();
-            const pass = DOM.authPass.value;
-            
-            DOM.authError.classList.add('hidden');
-            DOM.authSubmitBtn.disabled = true;
-            DOM.authSpinner.classList.remove('hidden');
-            
+            const email = el('login-email').value;
+            const pwd = el('login-password').value;
             try {
-                // Attempt Login First
-                await auth.signInWithEmailAndPassword(email, pass);
-                // Success: onAuthStateChanged will handle the rest
-            } catch (err) {
-                // Firebase Identity Platform merges errors to prevent email enumeration.
-                // If it fails with credentials issue, it might mean the account doesn't exist OR wrong password.
-                if (err.code === 'auth/invalid-login-credentials' || err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
-                    try {
-                        // Attempt to Register since login failed
-                        await auth.createUserWithEmailAndPassword(email, pass);
-                        // Success: New user registered
-                    } catch (regErr) {
-                        if (regErr.code === 'auth/email-already-in-use') {
-                            // Account exists! So the initial login failure was a WRONG PASSWORD.
-                            showAuthError("Incorrect password. Please try again.");
+                els.sendBtn.disabled = true;
+                await signInWithEmailAndPassword(auth, email, pwd);
+            } catch(error) {
+                els.authErr.innerText = error.message;
+                els.authErr.classList.remove('hidden');
+            } finally { els.sendBtn.disabled = false; }
+        });
+
+        els.signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = el('signup-email').value;
+            const pwd = el('signup-password').value;
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, pwd);
+                // Set default user data
+                await set(ref(db, `users/${cred.user.uid}`), {
+                    email: email,
+                    role: email === 'admin@knowledge.pro' ? 'admin' : 'user', // Auto-admin backdoor for demo
+                    banned: false,
+                    redTick: false
+                });
+            } catch(error) {
+                els.authErr.innerText = error.message;
+                els.authErr.classList.remove('hidden');
+            }
+        });
+
+        window.logout = () => signOut(auth);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                window.AppState.user = user;
+                el('user-display-email').innerText = user.email;
+                els.auth.classList.add('hidden');
+                els.app.classList.remove('hidden');
+                
+                // Fetch user data
+                onValue(ref(db, `users/${user.uid}`), (snap) => {
+                    const data = snap.val();
+                    if(data) {
+                        window.AppState.userData = data;
+                        if(data.banned) {
+                            alert("You are banned by admin.");
+                            logout();
+                            return;
+                        }
+                        if(data.role === 'admin' || data.redTick) {
+                            el('admin-badge').classList.remove('hidden');
+                            el('admin-panel-btn').classList.remove('hidden');
                         } else {
-                            showAuthError(regErr.message);
+                            el('admin-badge').classList.add('hidden');
+                            el('admin-panel-btn').classList.add('hidden');
                         }
+                        if(data.role === 'admin') initAdminListeners();
                     }
-                } else {
-                    showAuthError(err.message);
-                }
-            } finally {
-                DOM.authSubmitBtn.disabled = false;
-                DOM.authSpinner.classList.add('hidden');
+                });
+
+                // Load Global Data
+                loadGlobalListeners();
+                
+                // Load user chats
+                loadUserChats();
+                
+                els.loading.style.display = 'none';
+            } else {
+                window.AppState.user = null;
+                els.auth.classList.remove('hidden');
+                els.app.classList.add('hidden');
+                els.loading.style.display = 'none';
             }
         });
 
-        function showAuthError(msg) {
-            DOM.authError.textContent = msg;
-            DOM.authError.classList.remove('hidden');
-        }
-
-        function logout() { auth.signOut(); }
-
-        function updateUIForUser() {
-            if (!currentUser || !userData) return;
-            const nameStr = currentUser.email.split('@')[0];
-            DOM.userAvatar.textContent = nameStr.charAt(0).toUpperCase();
-            
-            if (userData.role === 'admin') {
-                DOM.adminBtnContainer.classList.remove('hidden');
-                DOM.userDisplayName.innerHTML = `${nameStr} <span class="bg-red-100 text-red-600 px-1.5 py-0.5 rounded text-xs ml-1 border border-red-200">ADMIN</span>`;
-            } else {
-                DOM.adminBtnContainer.classList.add('hidden');
-                DOM.userDisplayName.textContent = nameStr;
-            }
-            loadModels(); // Refresh model dropdown for Admin Pro access
-        }
 
         // ==========================================
-        // 3. UI, THEME & INTERACTIONS
+        // 4. GLOBAL LISTENERS (Theme, Announce, Models, Train Data)
         // ==========================================
-        function toggleSidebar() {
-            DOM.sidebar.classList.toggle('-translate-x-full');
-            DOM.sidebarOverlay.classList.toggle('hidden');
-        }
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            html.classList.toggle('dark');
-            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-        }
-
-        // ==========================================
-        // 4. CHAT SYSTEM & STREAMING
-        // ==========================================
-        function createNewChat() {
-            currentChatId = null;
-            if (currentChatListener) db.ref(currentChatListener).off();
-            DOM.msgList.innerHTML = '';
-            DOM.welcomeScreen.classList.remove('hidden');
-            DOM.chatActions.classList.add('hidden');
-            DOM.deletedChatOverlay.classList.add('hidden');
-            // Close sidebar on mobile after creation
-            if(window.innerWidth < 768 && !DOM.sidebar.classList.contains('-translate-x-full')) toggleSidebar();
-            
-            // Highlight reset
-            document.querySelectorAll('#chat-list button').forEach(b => b.classList.remove('bg-blue-100', 'dark:bg-gray-800', 'font-bold'));
-        }
-
-        function loadChats() {
-            db.ref(`chats/${currentUser.uid}`).orderByChild('updatedAt').on('value', snap => {
-                DOM.chatList.innerHTML = '';
-                const chats = [];
-                snap.forEach(child => { chats.push({ id: child.key, ...child.val() }); });
-                
-                if(chats.length === 0) {
-                    DOM.chatList.innerHTML = '<div class="text-xs text-center text-gray-500 mt-4 p-2">No chat history. Start a new conversation.</div>';
-                    return;
+        function loadGlobalListeners() {
+            // Theme
+            onValue(ref(db, 'global/theme'), (snap) => {
+                const th = snap.val();
+                if(th) {
+                    if(th.bgUrl) document.documentElement.style.setProperty('--dynamic-bg', `url('${th.bgUrl}')`);
+                    else document.documentElement.style.setProperty('--dynamic-bg', 'none');
+                    if(th.btnColor) {
+                        document.documentElement.style.setProperty('--dynamic-btn', th.btnColor);
+                        el('theme-color-picker').value = th.btnColor;
+                        el('theme-btn-color').value = th.btnColor;
+                    }
                 }
+            });
 
-                chats.reverse().forEach(chat => {
-                    const btn = document.createElement('button');
-                    const isActive = chat.id === currentChatId;
-                    btn.className = `w-full text-left p-3 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition truncate text-sm flex items-center gap-3 ${isActive ? 'bg-blue-50 dark:bg-gray-800 font-bold border-l-4 border-blue-600' : 'border-l-4 border-transparent'}`;
-                    btn.innerHTML = `<i class="far fa-message text-gray-400"></i> ${escapeHTML(chat.title || 'New Chat')}`;
-                    btn.onclick = () => openChat(chat.id);
-                    DOM.chatList.appendChild(btn);
-                });
+            // Announcements
+            onValue(ref(db, 'global/announcement'), (snap) => {
+                const ann = snap.val();
+                const banner = el('announcement-banner');
+                if(ann) {
+                    // Check expiry
+                    if(ann.expiry !== 'never' && Date.now() > ann.expiry) {
+                        remove(ref(db, 'global/announcement'));
+                        return;
+                    }
+                    if(localStorage.getItem('dismissed_ann') !== ann.id) {
+                        el('ann-header').innerText = ann.header;
+                        el('ann-content').innerText = ann.content;
+                        banner.classList.remove('hidden');
+                    }
+                } else {
+                    banner.classList.add('hidden');
+                }
+            });
+
+            // Models
+            onValue(ref(db, 'global/models'), (snap) => {
+                const m = snap.val() || {};
+                window.AppState.models = m;
+                updateModelSelector();
+                if(window.AppState.userData?.role === 'admin') renderAdminModels();
+            });
+
+            // Train Data
+            onValue(ref(db, 'global/trainData'), (snap) => {
+                const td = snap.val();
+                if(td) {
+                    try { window.AppState.trainData = JSON.parse(td); } catch(e){}
+                    if(window.AppState.userData?.role === 'admin') el('admin-train-data').value = td;
+                }
             });
         }
 
-        function openChat(chatId) {
-            currentChatId = chatId;
-            DOM.welcomeScreen.classList.add('hidden');
-            DOM.chatActions.classList.remove('hidden');
-            DOM.deletedChatOverlay.classList.add('hidden');
-            isTyping = false; // Reset typing lock safely
-            
+        window.dismissAnnouncement = () => {
+            el('announcement-banner').classList.add('hidden');
+            const annId = el('ann-header').innerText; // simplistic id
+            localStorage.setItem('dismissed_ann', annId);
+        }
+
+        function updateModelSelector() {
+            const sel = els.modelSelector;
+            sel.innerHTML = '<option value="default">Default Model</option>';
+            Object.keys(window.AppState.models).forEach(k => {
+                const mod = window.AppState.models[k];
+                // Check expiry
+                if(mod.expiry !== 'never' && Date.now() > mod.expiry) return;
+                // Check access
+                if(mod.access === 'pro' && window.AppState.userData?.role !== 'admin') {
+                    sel.innerHTML += `<option value="${k}" disabled>${mod.name} (Pro Only)</option>`;
+                } else {
+                    sel.innerHTML += `<option value="${k}">${mod.name}</option>`;
+                }
+            });
+        }
+
+        // ==========================================
+        // 5. CHAT SYSTEM
+        // ==========================================
+        function loadUserChats() {
+            onValue(ref(db, `chats/${window.AppState.user.uid}`), (snap) => {
+                const data = snap.val() || {};
+                window.AppState.chats = data;
+                renderSidebarChats();
+                
+                // If current chat was deleted by admin while viewing
+                if(window.AppState.currentChatId && data[window.AppState.currentChatId]?.deletedByAdmin) {
+                    renderMessages();
+                }
+            });
+        }
+
+        window.createNewChat = async () => {
+            const newChatRef = push(ref(db, `chats/${window.AppState.user.uid}`));
+            const id = newChatRef.key;
+            await set(newChatRef, {
+                title: "New Chat",
+                messages: [],
+                createdAt: Date.now()
+            });
+            selectChat(id);
+        };
+
+        window.selectChat = (id) => {
+            window.AppState.currentChatId = id;
             if(window.innerWidth < 768) toggleSidebar();
-            
-            if (currentChatListener) db.ref(currentChatListener).off();
-            currentChatListener = `chats/${currentUser.uid}/${chatId}`;
-            
-            // Listen for messages or admin deletion
-            db.ref(currentChatListener).on('value', snap => {
-                if (!snap.exists()) {
-                    if (currentChatId === chatId) DOM.deletedChatOverlay.classList.remove('hidden');
-                    return;
-                }
-                const chatData = snap.val();
-                if(!isTyping) renderMessages(chatData.messages || []);
-            });
-            
-            // Visual Update
-            document.querySelectorAll('#chat-list button').forEach(b => {
-                b.classList.remove('bg-blue-50', 'dark:bg-gray-800', 'font-bold', 'border-blue-600');
-                b.classList.add('border-transparent');
-            });
-            event?.currentTarget?.classList.add('bg-blue-50', 'dark:bg-gray-800', 'font-bold', 'border-blue-600');
-            event?.currentTarget?.classList.remove('border-transparent');
-        }
+            renderSidebarChats();
+            renderMessages();
+        };
 
-        function renderMessages(messages) {
-            DOM.msgList.innerHTML = '';
-            messages.forEach(msg => appendMessageNode(msg.role, msg.content, false));
-            scrollToBottom();
-        }
-
-        function appendMessageNode(role, content, animate = false) {
-            const div = document.createElement('div');
-            div.className = `flex gap-3 md:gap-4 ${role === 'user' ? 'justify-end' : 'justify-start'}`;
-            
-            const isUser = role === 'user';
-            
-            // Avatars
-            const userAvatar = `<div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs mt-1 shadow-sm font-bold">U</div>`;
-            const aiAvatar = `<div class="w-8 h-8 rounded-full bg-primary flex-shrink-0 flex items-center justify-center text-white text-xs mt-1 shadow-sm"><i class="fas fa-sparkles"></i></div>`;
-            
-            // Bubbles
-            const userBubble = 'bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] shadow-sm';
-            const aiBubble = 'markdown-body text-gray-800 dark:text-gray-100 max-w-[85%] w-full overflow-hidden bg-white dark:bg-darkSurface p-4 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 dark:border-gray-700';
-            
-            if (isUser) {
-                div.innerHTML = `<div class="${userBubble} whitespace-pre-wrap">${escapeHTML(content)}</div>${userAvatar}`;
-            } else {
-                div.innerHTML = `${aiAvatar}<div class="${aiBubble} ai-message-content"></div>`;
-            }
-            
-            DOM.msgList.appendChild(div);
-            
-            if (!isUser) {
-                const contentNode = div.querySelector('.ai-message-content');
-                if (animate) {
-                    isTyping = true;
-                    contentNode.classList.add('typing-cursor');
-                    streamText(content, contentNode, () => {
-                        contentNode.classList.remove('typing-cursor');
-                        isTyping = false;
-                        saveCurrentMessages(); // Sync to Firebase after typing completes
-                    });
-                } else {
-                    contentNode.innerHTML = marked.parse(content);
+        window.deleteChat = async (e, id) => {
+            e.stopPropagation();
+            if(confirm("Delete this chat?")) {
+                await remove(ref(db, `chats/${window.AppState.user.uid}/${id}`));
+                if(window.AppState.currentChatId === id) {
+                    window.AppState.currentChatId = null;
+                    renderMessages();
                 }
             }
-            scrollToBottom();
-            return div;
-        }
+        };
 
-        function streamText(fullText, node, callback) {
-            let i = 0;
-            node.innerHTML = '';
-            const speed = 12; // Stream ms speed
-            const interval = setInterval(() => {
-                i += Math.floor(Math.random() * 3) + 1; // Variable chunk sizes simulate real streaming
-                if (i >= fullText.length) i = fullText.length;
-                node.innerHTML = marked.parse(fullText.substring(0, i));
-                scrollToBottom();
-                if (i === fullText.length) {
-                    clearInterval(interval);
-                    callback();
-                }
-            }, speed);
-        }
-
-        async function sendMessage() {
-            if (isTyping || userData?.isBanned) return;
-            const text = DOM.msgInput.value.trim();
-            if (!text) return;
-            
-            // Reset input UI
-            DOM.msgInput.value = '';
-            DOM.msgInput.style.height = '52px';
-            DOM.sendBtn.setAttribute('disabled', 'true');
-            DOM.welcomeScreen.classList.add('hidden');
-            DOM.chatActions.classList.remove('hidden');
-
-            // 1. Immediately append user message visually
-            appendMessageNode('user', text);
-            scrollToBottom();
-            
-            // 2. Compute AI Response utilizing trained data & system prompts
-            const modelId = DOM.modelSelector.value;
-            const aiResponse = generateSimulatedAIResponse(text, modelId);
-            
-            // 3. Setup Firebase Structure
-            let messagesArray = [];
-            
-            if (!currentChatId) {
-                // Brand new chat
-                const newRef = db.ref(`chats/${currentUser.uid}`).push();
-                currentChatId = newRef.key;
-                const shortTitle = text.length > 25 ? text.substring(0, 25) + '...' : text;
-                
-                messagesArray = [{role: 'user', content: text}];
-                await newRef.set({ title: shortTitle, updatedAt: Date.now(), messages: messagesArray });
-                openChat(currentChatId); // Start listening to this specific node
-            } else {
-                // Existing Chat - Fetch current array & append
-                const snap = await db.ref(`chats/${currentUser.uid}/${currentChatId}/messages`).once('value');
-                messagesArray = snap.val() || [];
-                messagesArray.push({role: 'user', content: text});
-                db.ref(`chats/${currentUser.uid}/${currentChatId}`).update({ messages: messagesArray, updatedAt: Date.now() });
+        window.deleteAllMyChats = async () => {
+            if(confirm("Delete ALL your chats permanently?")) {
+                await remove(ref(db, `chats/${window.AppState.user.uid}`));
+                window.AppState.currentChatId = null;
+                closeModals();
+                renderMessages();
             }
+        };
 
-            // 4. Animate AI Response (Delay gives a realistic processing feel)
-            setTimeout(() => {
-                appendMessageNode('ai', aiResponse, true);
-            }, 400);
-        }
-
-        function saveCurrentMessages() {
-            if (!currentChatId) return;
-            // Parse current DOM messages to string array to save the AI response safely
-            const msgs = Array.from(DOM.msgList.children)
-                .filter(el => el.querySelector('.ai-message-content') || el.querySelector('.bg-blue-600'))
-                .map(el => {
-                    const isUser = el.querySelector('.bg-blue-600') !== null;
-                    const content = isUser ? el.querySelector('.bg-blue-600').innerText : el.querySelector('.ai-message-content').innerText;
-                    return { role: isUser ? 'user' : 'ai', content };
-                });
-            db.ref(`chats/${currentUser.uid}/${currentChatId}`).update({ messages: msgs, updatedAt: Date.now() });
-        }
-
-        function deleteCurrentChat() {
-            if(currentChatId && confirm('Permanently delete this chat?')) {
-                db.ref(`chats/${currentUser.uid}/${currentChatId}`).remove();
-                createNewChat();
-            }
-        }
-
-        function renameCurrentChat() {
-            if(!currentChatId) return;
-            const newName = prompt('Enter a new name for this chat:');
-            if(newName && newName.trim().length > 0) {
-                db.ref(`chats/${currentUser.uid}/${currentChatId}`).update({ title: newName.trim() });
-            }
-        }
-
-        function generateSimulatedAIResponse(prompt, modelId) {
-            const model = modelsCache[modelId];
-            const sysPrompt = localStorage.getItem('sysPrompt') || '';
-            let reply = "I am Knowledge Pro, a simulated AI environment without an active backend NLP processor right now. Admin can train me using JSON models.";
-            
-            // Admin Custom JSON Dataset Engine
-            if (model && model.trainingData) {
-                try {
-                    const data = JSON.parse(model.trainingData);
-                    const promptLower = prompt.toLowerCase();
-                    let foundMatch = false;
-                    
-                    // Simple keyword matching engine
-                    for (const key in data) {
-                        if (promptLower.includes(key.toLowerCase())) {
-                            reply = data[key];
-                            foundMatch = true;
-                            break;
-                        }
-                    }
-                    if(!foundMatch && data["default"]) reply = data["default"]; // Optional fallback
-                } catch(e) { 
-                    console.error("Training JSON parse error"); 
-                }
-            } else {
-                // Hardcoded fallback logic
-                const p = prompt.toLowerCase();
-                if(p.includes('hello') || p.includes('hi')) reply = "Hello! I am ready to assist you. How can I help today?";
-                if(p.includes('code') || p.includes('javascript')) reply = "Here is an example snippet:\n\n```javascript\nfunction solve(array) {\n  return array.map(x => x * 2);\n}\nconsole.log(solve([1,2,3]));\n```";
-                if(p.includes('help')) reply = "**Knowledge Pro Commands:**\n- Change models top left.\n- Open Sidebar for settings.\n- Set rules via System Prompt.";
-            }
-            
-            if (sysPrompt) reply = `> **System Rules Applied:**\n> *${sysPrompt}*\n\n---\n${reply}`;
-            return reply;
-        }
-
-        function scrollToBottom() {
-            DOM.msgContainer.scrollTop = DOM.msgContainer.scrollHeight;
-        }
-
-        // ==========================================
-        // 5. SYSTEM PROMPTS & MODELS
-        // ==========================================
-        function loadModels() {
-            db.ref('models').on('value', snap => {
-                modelsCache = snap.val() || {};
-                DOM.modelSelector.innerHTML = '<option value="default">Gemini Pro</option>';
-                const now = Date.now();
-                
-                Object.keys(modelsCache).forEach(k => {
-                    const m = modelsCache[k];
-                    // Clean up / ignore expired models
-                    if (m.expiry !== 'never' && m.createdAt) {
-                        const days = parseInt(m.expiry);
-                        if (now - m.createdAt > days * 24 * 60 * 60 * 1000) return; 
-                    }
-                    
-                    // Filter Pro models from regular users
-                    if (m.isFree === 'true' || userData?.role === 'admin') {
-                        const opt = document.createElement('option');
-                        opt.value = k;
-                        opt.textContent = `${m.name} (${m.version})${m.isFree === 'false' ? ' [PRO]' : ''}`;
-                        DOM.modelSelector.appendChild(opt);
-                    }
-                });
-            });
-        }
-
-        function openSystemPrompt() {
-            document.getElementById('sys-prompt-input').value = localStorage.getItem('sysPrompt') || '';
-            document.getElementById('sys-prompt-modal').classList.remove('hidden');
-        }
-        function closeSystemPrompt() { document.getElementById('sys-prompt-modal').classList.add('hidden'); }
-        function saveSystemPrompt() {
-            localStorage.setItem('sysPrompt', document.getElementById('sys-prompt-input').value.trim());
-            closeSystemPrompt();
-        }
-
-        // ==========================================
-        // 6. GLOBAL ANNOUNCEMENTS & THEMES
-        // ==========================================
-        function checkAnnouncements() {
-            db.ref('announcements').on('value', snap => {
-                const anns = snap.val();
-                if(!anns) {
-                    document.getElementById('announcement-banner').classList.add('hidden');
-                    return;
-                }
-                
-                // Fetch the newest announcement
-                const active = Object.values(anns).pop();
-                if(!active) return;
-                
-                // Expiry Check
-                if(active.expiry !== 'never' && active.createdAt) {
-                    if (Date.now() - active.createdAt > parseInt(active.expiry)*24*60*60*1000) return;
-                }
-                
-                // Has user closed this specific one?
-                if (localStorage.getItem('closed_ann') !== active.createdAt.toString()) {
-                    document.getElementById('ann-header').textContent = active.header;
-                    document.getElementById('ann-content').textContent = active.content;
-                    document.getElementById('announcement-banner').classList.remove('hidden');
-                    document.getElementById('announcement-banner').dataset.id = active.createdAt;
-                }
-            });
-        }
-        function closeAnnouncement() {
-            const el = document.getElementById('announcement-banner');
-            el.classList.add('hidden');
-            localStorage.setItem('closed_ann', el.dataset.id); // Save dismissal state
-        }
-
-        function loadGlobalTheme() {
-            db.ref('theme').on('value', snap => {
-                const t = snap.val();
-                if(t && t.bgUrl) {
-                    document.body.style.backgroundImage = `url('${t.bgUrl}')`;
-                } else {
-                    document.body.style.backgroundImage = 'none';
-                }
-            });
-        }
-
-        // ==========================================
-        // 7. ADMIN DASHBOARD & CONTROLS
-        // ==========================================
-        function openAdminPanel() {
-            if (userData?.role !== 'admin') return;
-            document.getElementById('admin-modal').classList.remove('hidden');
-            switchAdminTab('users');
-            loadAdminData();
-        }
-        function closeAdminPanel() { document.getElementById('admin-modal').classList.add('hidden'); }
-        
-        function switchAdminTab(tab) {
-            document.querySelectorAll('.admin-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-400'));
-            
-            document.getElementById(`admin-tab-${tab}`).classList.remove('hidden');
-            event.currentTarget?.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-blue-600', 'dark:text-blue-400');
-        }
-
-        function loadAdminData() {
-            // Populate Users Tab
-            db.ref('users').on('value', snap => {
-                const list = document.getElementById('admin-users-list');
-                list.innerHTML = '';
-                snap.forEach(child => {
-                    const u = child.val();
-                    const uid = child.key;
-                    
-                    if(uid === currentUser.uid) return; // Hide self to prevent self-banning lockouts
-                    
-                    const div = document.createElement('div');
-                    div.className = "flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl gap-3 shadow-sm";
-                    div.innerHTML = `
-                        <div class="flex-grow">
-                            <div class="font-bold text-lg">${escapeHTML(u.email)} ${u.role === 'admin' ? '<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs ml-2 align-middle border border-red-200">ADMIN</span>' : ''}</div>
-                            <div class="text-xs text-gray-500 mt-1">${u.isBanned ? '<span class="text-red-500 font-bold"><i class="fas fa-ban"></i> BANNED</span>' : '<span class="text-green-500"><i class="fas fa-check-circle"></i> Active</span>'} | UID: ${uid}</div>
+        function renderSidebarChats() {
+            els.chatList.innerHTML = '';
+            const chats = Object.entries(window.AppState.chats).sort((a,b) => b[1].createdAt - a[1].createdAt);
+            chats.forEach(([id, chat]) => {
+                const isActive = id === window.AppState.currentChatId;
+                const activeClass = isActive ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800';
+                els.chatList.innerHTML += `
+                    <div class="group flex justify-between items-center p-2 rounded cursor-pointer ${activeClass} transition" onclick="selectChat('${id}')">
+                        <div class="flex items-center gap-2 overflow-hidden w-full">
+                            <i class="fas fa-message text-gray-500 text-sm flex-shrink-0"></i>
+                            <span class="truncate text-sm flex-1">${chat.title || 'New Chat'}</span>
                         </div>
-                        <div class="flex flex-wrap gap-2 sm:flex-nowrap">
-                            <button onclick="toggleBan('${uid}', ${u.isBanned}, '${u.role}')" class="px-3 py-1.5 text-sm font-semibold rounded-lg ${u.isBanned ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 transition'} shadow-sm">${u.isBanned ? 'Unban' : 'Ban'}</button>
-                            <button onclick="deleteUserHistory('${uid}')" class="px-3 py-1.5 text-sm font-semibold rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition shadow-sm" title="Delete all chats">Wipe Chats</button>
-                            <button onclick="toggleAdmin('${uid}', '${u.role}')" class="px-3 py-1.5 text-sm font-semibold rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition shadow-sm">${u.role === 'admin' ? 'Remove Admin' : 'Make Admin'}</button>
-                        </div>
-                    `;
-                    list.appendChild(div);
-                });
+                        <button onclick="deleteChat(event, '${id}')" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition px-2">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                `;
             });
-            
-            // Populate Models Tab
-            db.ref('models').on('value', snap => {
-                const list = document.getElementById('admin-models-list');
-                list.innerHTML = '';
-                snap.forEach(child => {
-                    const m = child.val();
-                    list.innerHTML += `
-                    <div class="p-3 border border-gray-200 dark:border-gray-700 rounded-xl flex justify-between items-center bg-white dark:bg-gray-800 shadow-sm">
-                        <div>
-                            <div class="font-bold">${escapeHTML(m.name)} <span class="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded text-gray-600 dark:text-gray-300 ml-1">${m.version}</span></div>
-                            <div class="text-xs mt-1 ${m.isFree === 'true' ? 'text-green-500' : 'text-purple-500 font-bold'}">${m.isFree === 'true' ? 'Free Access' : 'Pro Access'}</div>
-                        </div>
-                        <button onclick="deleteModel('${child.key}')" class="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center"><i class="fas fa-trash"></i></button>
+        }
+
+        function renderMessages() {
+            els.msgContainer.innerHTML = '';
+            const chatId = window.AppState.currentChatId;
+            if(!chatId || !window.AppState.chats[chatId]) {
+                els.msgContainer.innerHTML = `
+                    <div class="flex h-full items-center justify-center text-center text-gray-500 flex-col opacity-50">
+                        <i class="fas fa-brain text-6xl mb-4 text-primary"></i>
+                        <h2 class="text-2xl font-bold">How can I help you today?</h2>
                     </div>`;
-                });
-            });
+                return;
+            }
 
-            // Populate Firebase Settings Meta
-            db.ref('admin/settings/firebaseDetails').once('value', snap => {
-                document.getElementById('fb-details').value = snap.val() || '';
+            const chat = window.AppState.chats[chatId];
+            if(chat.deletedByAdmin) {
+                els.msgContainer.innerHTML = `<div class="text-center text-red-500 mt-10 font-bold p-4 bg-red-100 dark:bg-red-900/30 rounded">This chat was deleted by admin.</div>`;
+                els.chatInput.disabled = true;
+                return;
+            } else {
+                els.chatInput.disabled = false;
+            }
+
+            const msgs = chat.messages || [];
+            if(msgs.length === 0) {
+                 els.msgContainer.innerHTML = `<div class="text-center text-gray-400 mt-10">Empty chat. Start typing!</div>`;
+                 return;
+            }
+
+            let html = '';
+            msgs.forEach(m => {
+                if(m.role === 'user') {
+                    html += `<div class="flex justify-end mb-4"><div class="bg-gray-100 dark:bg-gray-700 max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm whitespace-pre-wrap">${escapeHTML(m.content)}</div></div>`;
+                } else {
+                    html += `<div class="flex justify-start mb-4 gap-3"><div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-primary text-white"><i class="fas fa-robot text-sm"></i></div><div class="markdown-body max-w-[85%] text-sm pt-1 overflow-x-auto">${marked.parse(m.content)}</div></div>`;
+                }
             });
+            els.msgContainer.innerHTML = html;
+            els.msgContainer.scrollTop = els.msgContainer.scrollHeight;
         }
 
-        // Admin Security Hooks
-        window.toggleBan = (uid, currentStatus, role) => {
-            if(role === 'admin') return alert('Cannot ban another Admin.');
-            db.ref(`users/${uid}`).update({ isBanned: !currentStatus });
-        };
-        window.toggleAdmin = (uid, role) => {
-            if(confirm(`Are you sure you want to ${role==='admin'?'REMOVE':'MAKE'} this user admin?`)) {
-                db.ref(`users/${uid}`).update({ role: role === 'admin' ? 'user' : 'admin' });
+        window.handleSend = async () => {
+            if(window.AppState.isGenerating) return;
+            const text = els.chatInput.value.trim();
+            if(!text) return;
+            if(window.AppState.userData.banned) {
+                alert("You banned by admin");
+                return;
             }
-        };
-        window.deleteUserHistory = (uid) => { 
-            if(confirm('Warning: This permanently deletes ALL conversations for this user.')) {
-                db.ref(`chats/${uid}`).remove(); 
+
+            if(!window.AppState.currentChatId) await createNewChat();
+            const chatId = window.AppState.currentChatId;
+            
+            // Add user message to DB
+            const chatRef = ref(db, `chats/${window.AppState.user.uid}/${chatId}`);
+            let msgs = window.AppState.chats[chatId]?.messages || [];
+            msgs.push({ role: 'user', content: text });
+            
+            // Generate title if first msg
+            let updateObj = { messages: msgs };
+            if(msgs.length === 1) updateObj.title = text.substring(0, 30) + (text.length>30?'...':'');
+            await update(chatRef, updateObj);
+            
+            els.chatInput.value = '';
+            els.chatInput.style.height = 'auto';
+            renderMessages();
+            
+            // Simulate AI
+            window.AppState.isGenerating = true;
+            els.sendBtn.disabled = true;
+            
+            // Create typing container visually
+            const aiContainerId = 'ai-msg-' + Date.now();
+            els.msgContainer.innerHTML += `<div class="flex justify-start mb-4 gap-3"><div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-primary text-white"><i class="fas fa-robot text-sm"></i></div><div id="${aiContainerId}" class="markdown-body max-w-[85%] text-sm pt-1 typing-cursor"></div></div>`;
+            els.msgContainer.scrollTop = els.msgContainer.scrollHeight;
+
+            // Generate Response from Train Data (Naive matcher)
+            let response = "I am a custom model. I don't have an answer for that.";
+            const td = window.AppState.trainData || [];
+            for(let item of td) {
+                if(item.q && text.toLowerCase().includes(item.q.toLowerCase())) {
+                    response = item.a; break;
+                }
             }
-        };
-        window.deleteModel = (id) => { 
-            if(confirm('Delete this AI model?')) db.ref(`models/${id}`).remove(); 
+            
+            // Append system prompt if any
+            const sysPrompt = localStorage.getItem('kb_sys_prompt');
+            if(sysPrompt && msgs.length === 1) {
+                response = `*[System Info: ${sysPrompt}]*\n\n` + response;
+            }
+
+            // Stream simulation
+            const words = response.split(' ');
+            let currentText = '';
+            let i = 0;
+            const interval = setInterval(async () => {
+                if(i < words.length) {
+                    currentText += words[i] + ' ';
+                    el(aiContainerId).innerHTML = marked.parse(currentText);
+                    els.msgContainer.scrollTop = els.msgContainer.scrollHeight;
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    el(aiContainerId).classList.remove('typing-cursor');
+                    
+                    // Save to DB
+                    msgs.push({ role: 'assistant', content: currentText.trim() });
+                    await update(chatRef, { messages: msgs });
+                    
+                    window.AppState.isGenerating = false;
+                    els.sendBtn.disabled = false;
+                }
+            }, 50); // 50ms per word
         };
 
-        // Form Submit: Model Creation
-        document.getElementById('model-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const dataStr = document.getElementById('m-data').value.trim();
-            if(dataStr) {
-                try { JSON.parse(dataStr); } 
-                catch(err) { alert('Training dataset must be strictly valid JSON.'); return; }
+        // Enter to send
+        els.chatInput.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
             }
-            db.ref('models').push({
-                name: document.getElementById('m-name').value,
-                version: document.getElementById('m-version').value,
-                isFree: document.getElementById('m-free').value,
-                expiry: document.getElementById('m-expiry').value,
-                trainingData: dataStr,
-                createdAt: Date.now()
+        });
+
+        window.saveSystemPrompt = () => {
+            const val = el('user-system-prompt').value;
+            localStorage.setItem('kb_sys_prompt', val);
+            alert("Prompt saved globally on device.");
+        };
+
+        // Helpers
+        function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag])); }
+
+        // ==========================================
+        // 6. ADMIN PANEL LOGIC
+        // ==========================================
+        window.switchAdminTab = (tab) => {
+            document.querySelectorAll('.admin-tab-content').forEach(d => d.classList.add('hidden'));
+            document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active', 'bg-gray-200', 'dark:bg-gray-700'));
+            el(`tab-${tab}`).classList.remove('hidden');
+            event.currentTarget.classList.add('active', 'bg-gray-200', 'dark:bg-gray-700');
+        };
+
+        function initAdminListeners() {
+            // Fetch all users
+            onValue(ref(db, 'users'), (snap) => {
+                window.AppState.allUsers = snap.val() || {};
+                renderUsersList();
             });
-            e.target.reset();
-            alert('Model Successfully Deployed');
-        });
-
-        // Form Submit: Announcements
-        document.getElementById('ann-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            db.ref('announcements').push({
-                name: document.getElementById('a-name').value,
-                header: document.getElementById('a-header').value,
-                content: document.getElementById('a-content').value,
-                expiry: document.getElementById('a-expiry').value,
-                createdAt: Date.now()
+            // Fetch all chats for history reading
+            onValue(ref(db, 'chats'), (snap) => {
+                window.AppState.allChats = snap.val() || {};
             });
-            e.target.reset();
-            alert('Announcement Live Globally');
-        });
-
-        // Form Submit: Global Theme
-        document.getElementById('theme-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            db.ref('theme').set({ bgUrl: document.getElementById('t-bg').value });
-            alert('Global Theme Applied');
-        });
-        window.clearTheme = () => { 
-            db.ref('theme').remove(); 
-            document.getElementById('t-bg').value = ''; 
-        };
-
-        // Form Submit: Firebase Settings (Metadata only)
-        document.getElementById('fb-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            db.ref('admin/settings/firebaseDetails').set(document.getElementById('fb-details').value);
-            alert('Firebase settings JSON stored safely.');
-        });
-
-        // HTML Sanitizer Utility (XSS protection)
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+            
+            // Pre-fill fields
+            const fbconf = localStorage.getItem('kb_firebase_config');
+            if(fbconf) el('admin-fb-config').value = fbconf;
         }
+
+        // --- Firebase Tab ---
+        window.saveFirebaseConfig = () => {
+            const val = el('admin-fb-config').value;
+            try { JSON.parse(val); localStorage.setItem('kb_firebase_config', val); alert("Saved! Reloading..."); location.reload(); }
+            catch(e) { alert("Invalid JSON format"); }
+        };
+        window.resetFirebaseConfig = () => { localStorage.removeItem('kb_firebase_config'); alert("Reset! Reloading..."); location.reload(); };
+
+        // --- Train Data ---
+        window.saveTrainData = async () => {
+            const val = el('admin-train-data').value;
+            try {
+                JSON.parse(val); // validate json array
+                await set(ref(db, 'global/trainData'), val);
+                alert("Training data updated!");
+            } catch(e) { alert("Invalid JSON format array."); }
+        };
+
+        // --- Models Tab ---
+        window.createModel = async () => {
+            const id = el('model-id').value.trim() || 'v' + Date.now();
+            const name = el('model-name').value.trim() || 'Unnamed Model';
+            const access = el('model-access').value;
+            const expiryStr = el('model-expiry').value;
+            
+            let expiryTime = 'never';
+            if(expiryStr === '1d') expiryTime = Date.now() + (24*60*60*1000);
+            if(expiryStr === '7d') expiryTime = Date.now() + (7*24*60*60*1000);
+
+            await set(ref(db, `global/models/${id}`), { name, access, expiry: expiryTime, created: Date.now() });
+            el('model-id').value = ''; el('model-name').value = '';
+        };
+
+        function renderAdminModels() {
+            const list = el('models-list');
+            list.innerHTML = '';
+            Object.keys(window.AppState.models).forEach(k => {
+                const m = window.AppState.models[k];
+                const exp = m.expiry === 'never' ? 'Never' : new Date(m.expiry).toLocaleDateString();
+                list.innerHTML += `
+                    <div class="flex justify-between items-center bg-white dark:bg-gray-800 border dark:border-gray-600 p-3 rounded">
+                        <div><strong>${m.name}</strong> (${k}) <span class="text-xs bg-gray-200 dark:bg-gray-700 px-2 rounded">${m.access}</span> <span class="text-xs text-red-400">Exp: ${exp}</span></div>
+                        <button onclick="deleteModel('${k}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </div>`;
+            });
+        }
+        window.deleteModel = async (id) => { if(confirm("Delete model?")) await remove(ref(db, `global/models/${id}`)); };
+
+        // --- Users History Tab ---
+        window.renderUsersList = () => {
+            const tbody = el('users-table-body');
+            tbody.innerHTML = '';
+            const query = (el('search-user').value || '').toLowerCase();
+            Object.entries(window.AppState.allUsers).forEach(([uid, u]) => {
+                if(!u.email.toLowerCase().includes(query)) return;
+                const roleBadge = u.role==='admin' ? `<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Admin</span>` : `<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">User</span>`;
+                const banBtn = u.banned ? `<button onclick="toggleBan('${uid}', false)" class="text-green-500 hover:underline text-sm">Unban</button>` : `<button onclick="toggleBan('${uid}', true)" class="text-red-500 hover:underline text-sm">Ban</button>`;
+                const adminBtn = u.role==='admin' ? `<button onclick="setRole('${uid}', 'user')" class="text-yellow-600 hover:underline text-sm">Remove Admin</button>` : `<button onclick="setRole('${uid}', 'admin')" class="text-blue-500 hover:underline text-sm">Make Admin</button>`;
+                
+                tbody.innerHTML += `
+                    <tr class="border-b dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="p-2 cursor-pointer text-blue-500 hover:underline flex items-center gap-2" onclick="inspectUser('${uid}')">
+                            ${u.email} ${u.redTick?'<i class="fas fa-check-circle text-red-500"></i>':''}
+                        </td>
+                        <td class="p-2">${roleBadge} ${u.banned?'<span class="text-xs text-red-500">(Banned)</span>':''}</td>
+                        <td class="p-2 flex gap-3">${banBtn} | ${adminBtn}</td>
+                    </tr>
+                `;
+            });
+        };
+
+        window.toggleBan = async (uid, state) => { await update(ref(db, `users/${uid}`), { banned: state }); };
+        window.setRole = async (uid, role) => { 
+            await update(ref(db, `users/${uid}`), { role: role, redTick: role==='admin' }); 
+        };
+
+        window.inspectUser = (uid) => {
+            const cArea = el('user-chats-inspector');
+            const userChats = window.AppState.allChats[uid] || {};
+            if(Object.keys(userChats).length === 0) { cArea.innerHTML = "No history found."; return; }
+            
+            let html = `<h5 class="font-bold mb-2">History for ${window.AppState.allUsers[uid]?.email}</h5><div class="space-y-2">`;
+            Object.entries(userChats).forEach(([cid, chat]) => {
+                html += `
+                <div class="border p-2 rounded dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <div class="flex justify-between items-center border-b pb-1 mb-1">
+                        <strong>${chat.title||'Untitled'}</strong>
+                        <button onclick="deleteUserChat('${uid}', '${cid}')" class="text-xs text-red-500 bg-red-100 px-2 py-1 rounded">Delete Chat</button>
+                    </div>
+                    <div class="max-h-32 overflow-y-auto text-xs space-y-1 p-1">
+                        ${chat.deletedByAdmin ? '<span class="text-red-500">Deleted by admin</span>' : (chat.messages||[]).map(m=> `<div class="${m.role==='user'?'text-blue-600':'text-green-600'}"><b>${m.role}:</b> ${escapeHTML(m.content)}</div>`).join('')}
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+            cArea.innerHTML = html;
+        };
+
+        window.deleteUserChat = async (uid, cid) => {
+            if(confirm("Delete this user's chat? It will show 'deleted by admin' to them.")) {
+                await update(ref(db, `chats/${uid}/${cid}`), { deletedByAdmin: true });
+                inspectUser(uid); // Refresh
+            }
+        };
+
+        // --- Announcement Tab ---
+        window.createAnnouncement = async () => {
+            const header = el('ann-input-header').value;
+            const content = el('ann-input-content').value;
+            const expDays = el('ann-input-expiry').value;
+            if(!header || !content) return alert("Fill header and content");
+            
+            let expiry = 'never';
+            if(expDays !== 'never') expiry = Date.now() + (parseInt(expDays) * 24*60*60*1000);
+
+            await set(ref(db, 'global/announcement'), {
+                id: Date.now().toString(), header, content, expiry
+            });
+            alert("Announcement published!");
+            el('ann-input-header').value=''; el('ann-input-content').value='';
+        };
+        window.clearAnnouncement = async () => { await remove(ref(db, 'global/announcement')); alert("Deleted"); };
+
+        // --- Theme Tab ---
+        window.saveTheme = async () => {
+            const bgUrl = el('theme-bg-url').value;
+            const btnColor = el('theme-btn-color').value;
+            await update(ref(db, 'global/theme'), { bgUrl, btnColor });
+            alert("Theme applied to all users.");
+        };
+        window.resetTheme = async () => {
+            await remove(ref(db, 'global/theme'));
+            el('theme-bg-url').value = ''; el('theme-btn-color').value = '';
+            alert("Theme reset to default.");
+        };
+        
+        // Sync color picker
+        el('theme-color-picker').addEventListener('input', function() { el('theme-btn-color').value = this.value; });
+        el('theme-btn-color').addEventListener('input', function() { el('theme-color-picker').value = this.value; });
+
+        // Escape key closes modals
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape' && !els.modalOverlay.classList.contains('hidden')) closeModals();
+        });
 
     </script>
 </body>
