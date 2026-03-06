@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Knowledge Pro</title>
+    
+    <!-- Tailwind CSS (Zero Build) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: 'var(--color-primary, #10b981)' }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* CSS Variables for Dynamic Admin Theming */
+        :root {
+            --color-primary: #10b981; /* Default Tailwind Emerald 500 */
+        }
+        
+        /* Mobile-first full screen container safe from keyboard */
+        html, body {
+            height: 100%;
+            height: 100dvh;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color, #ffffff);
+            background-image: var(--bg-image, none);
+            background-size: cover;
+            background-position: center;
+        }
+
+        .dark body { background-color: var(--bg-color-dark, #111827); color: #f9fafb; }
+        
+        /* Loader styles */
+        #loading {
+            position: fixed; inset: 0; background: #ffffff; z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .dark #loading { background: #111827; }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--color-primary);
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Markdown Prose Styling */
+        .prose pre { background: #1f2937; color: #f8f8f2; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        .prose code { background: rgba(0,0,0,0.1); padding: 0.1rem 0.3rem; border-radius: 0.25rem; }
+        .dark .prose code { background: rgba(255,255,255,0.1); }
+        .prose p { margin-bottom: 0.5rem; }
+        
+        /* Typing animation cursor */
+        .cursor::after { content: '▋'; animation: blink 1s step-start infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+        /* Dynamic Theme Overlays */
+        #bg-overlay {
+            position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background: rgba(255, 255, 255, var(--bg-opacity, 0));
+        }
+        .dark #bg-overlay { background: rgba(0, 0, 0, var(--bg-opacity, 0.5)); }
+    </style>
+</head>
+<body class="text-gray-800 antialiased transition-colors duration-200">
+
+    <!-- Dynamic Background Overlay for Custom Images -->
+    <div id="bg-overlay"></div>
+
+    <!-- 1. LOADING FALLBACK -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <h2 class="text-xl font-semibold dark:text-white">Loading Knowledge Pro...</h2>
+    </div>
+
+    <!-- 2. ANNOUNCEMENT BANNER -->
+    <div id="announcement-banner" class="hidden w-full bg-primary text-white p-3 shadow-md relative z-50 flex justify-between items-center">
+        <div>
+            <strong id="announce-header" class="block text-sm uppercase tracking-wide opacity-80"></strong>
+            <span id="announce-content" class="text-base font-medium"></span>
+        </div>
+        <button onclick="closeAnnouncement()" class="text-white hover:text-gray-200 p-2">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- 3. AUTHENTICATION VIEW -->
+    <div id="auth-view" class="hidden h-full flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 p-8 border dark:border-gray-700">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Knowledge Pro</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Welcome to your intelligent assistant</p>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium dark:text-gray-300 mb-1">Email</label>
+                    <input type="email" id="login-email" required class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium dark:text-gray-300 mb-1">Password</label>
+                    <input type="password" id="login-password" required class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-primary">
+                </div>
+                <div id="login-error" class="text-red-500 text-sm hidden"></div>
+                <button type="submit" class="w-full py-2 px-4 bg-primary hover:opacity-90 text-white rounded-lg font-medium transition">Log In</button>
+                <p class="text-center text-sm dark:text-gray-400 mt-4">
+                    Don't have an account? <a href="#" onclick="toggleAuth('register')" class="text-primary hover:underline">Sign Up</a>
+                </p>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-sm font-medium dark:text-gray-300 mb-1">Name</label>
+                    <input type="text" id="reg-name" required class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium dark:text-gray-300 mb-1">Email</label>
+                    <input type="email" id="reg-email" required class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium dark:text-gray-300 mb-1">Password</label>
+                    <input type="password" id="reg-password" required class="w-full px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:border-primary">
+                </div>
+                <div id="reg-error" class="text-red-500 text-sm hidden"></div>
+                <button type="submit" class="w-full py-2 px-4 bg-primary hover:opacity-90 text-white rounded-lg font-medium transition">Create Account</button>
+                <p class="text-center text-sm dark:text-gray-400 mt-4">
+                    Already have an account? <a href="#" onclick="toggleAuth('login')" class="text-primary hover:underline">Log In</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. MAIN APP VIEW -->
+    <div id="app-view" class="hidden h-full flex bg-white/90 dark:bg-gray-900/90 backdrop-blur-md">
+        
+        <!-- Sidebar Overlay for Mobile -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden lg:hidden"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-30 w-72 bg-gray-50 dark:bg-gray-800 border-r dark:border-gray-700 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col h-full">
+            <div class="p-4 flex items-center justify-between">
+                <h2 class="text-xl font-bold flex items-center gap-2 dark:text-white">
+                    <i class="fas fa-brain text-primary"></i> Knowledge Pro
+                </h2>
+                <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-800 dark:hover:text-white text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="px-4 pb-2">
+                <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 py-3 px-4 bg-primary text-white rounded-lg hover:opacity-90 transition shadow-sm font-medium">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-2 py-2 space-y-1" id="chat-list">
+                <!-- Chat history loaded here dynamically -->
+            </div>
+
+            <!-- User Menu Area -->
+            <div class="p-4 border-t dark:border-gray-700 flex flex-col gap-2">
+                <div class="flex items-center gap-3 px-2 mb-2">
+                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold" id="user-avatar">U</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate dark:text-white" id="user-display-name">User Name</p>
+                        <p class="text-xs text-gray-500 truncate" id="user-role-display">User</p>
+                    </div>
+                </div>
+                
+                <button onclick="toggleDarkMode()" class="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition">
+                    <i class="fas fa-moon w-5"></i> Toggle Theme
+                </button>
+                <button onclick="openModal('settings-modal')" class="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition">
+                    <i class="fas fa-cog w-5"></i> Settings
+                </button>
+                <button id="admin-panel-btn" onclick="openModal('admin-modal')" class="hidden w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition">
+                    <i class="fas fa-shield-alt w-5"></i> Admin Dashboard
+                </button>
+                <button onclick="logout()" class="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition">
+                    <i class="fas fa-sign-out-alt w-5"></i> Sign Out
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="flex-1 flex flex-col h-full min-w-0 relative">
+            <!-- Header -->
+            <header class="flex items-center justify-between px-4 py-3 border-b dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm z-10 shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 dark:text-gray-300 text-xl">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <select id="model-selector" class="bg-transparent text-lg font-semibold dark:text-white focus:outline-none cursor-pointer">
+                        <option value="default">Default Model</option>
+                        <!-- Models dynamically populated -->
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="clearCurrentChat()" class="text-gray-500 hover:text-red-500 p-2" title="Clear Chat">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Banned Overlay -->
+            <div id="banned-overlay" class="hidden absolute inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col items-center justify-center p-4 text-center">
+                <i class="fas fa-ban text-6xl text-red-500 mb-4"></i>
+                <h2 class="text-3xl font-bold dark:text-white mb-2">Access Denied</h2>
+                <p class="text-gray-600 dark:text-gray-400 max-w-md">You have been banned by an administrator and can no longer access this application.</p>
+                <button onclick="logout()" class="mt-6 px-6 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 dark:text-white transition">Sign Out</button>
+            </div>
+
+            <!-- Messages Container -->
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 pb-32">
+                <!-- Welcome Screen -->
+                <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
+                    <div class="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center text-3xl mb-6 shadow-lg">
+                        <i class="fas fa-sparkles"></i>
+                    </div>
+                    <h1 class="text-4xl font-bold mb-4 dark:text-white">How can I help you today?</h1>
+                    <p class="text-gray-500 dark:text-gray-400">Select a model and start typing below to interact with Knowledge Pro.</p>
+                </div>
+                <!-- Dynamic Messages Go Here -->
+            </div>
+
+            <!-- Sticky Input Area -->
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white dark:from-gray-900 dark:via-gray-900 to-transparent pt-10 shrink-0">
+                <div class="max-w-4xl mx-auto relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border dark:border-gray-700 flex items-end pr-2 overflow-hidden">
+                    <textarea id="chat-input" rows="1" placeholder="Type a message..." class="w-full max-h-48 py-4 pl-4 pr-12 bg-transparent resize-none focus:outline-none dark:text-white text-gray-900" oninput="autoResize(this)" onkeydown="handleEnter(event)"></textarea>
+                    <button id="send-btn" onclick="sendMessage()" class="absolute right-3 bottom-3 p-2 text-primary hover:text-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-paper-plane text-xl"></i>
+                    </button>
+                </div>
+                <div class="text-center text-xs text-gray-400 mt-2">Knowledge Pro can make mistakes. Verify important information.</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 5. MODALS -->
+    <!-- Overlay for Modals -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-center justify-center p-4">
+        
+        <!-- Settings Modal (User & System Prompt) -->
+        <div id="settings-modal" class="modal-content hidden w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold dark:text-white">Settings</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800 dark:hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium dark:text-gray-300 mb-1">System Prompt</label>
+                    <textarea id="setting-system-prompt" rows="3" class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="You are a helpful assistant..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Instructions on how the AI should behave.</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t dark:border-gray-700 flex justify-end">
+                <button onclick="saveSettings()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-emerald-600">Save Changes</button>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard Modal -->
+        <div id="admin-modal" class="modal-content hidden w-full max-w-4xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900 rounded-t-xl">
+                <h3 class="text-xl font-bold text-red-600 dark:text-red-400"><i class="fas fa-shield-alt"></i> Admin Dashboard</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800 dark:hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+                <!-- Admin Tabs -->
+                <div class="w-48 bg-gray-100 dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col p-2 gap-1 overflow-y-auto">
+                    <button onclick="switchAdminTab('tab-users')" class="admin-tab text-left px-3 py-2 text-sm rounded-md bg-gray-200 dark:bg-gray-700 font-bold dark:text-white"><i class="fas fa-users w-5"></i> Users History</button>
+                    <button onclick="switchAdminTab('tab-models')" class="admin-tab text-left px-3 py-2 text-sm rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-gray-300"><i class="fas fa-robot w-5"></i> Models</button>
+                    <button onclick="switchAdminTab('tab-train')" class="admin-tab text-left px-3 py-2 text-sm rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-gray-300"><i class="fas fa-database w-5"></i> Train Data</button>
+                    <button onclick="switchAdminTab('tab-theme')" class="admin-tab text-left px-3 py-2 text-sm rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-gray-300"><i class="fas fa-paint-brush w-5"></i> Theme</button>
+                    <button onclick="switchAdminTab('tab-announce')" class="admin-tab text-left px-3 py-2 text-sm rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-gray-300"><i class="fas fa-bullhorn w-5"></i> Announce</button>
+                    <button onclick="switchAdminTab('tab-firebase')" class="admin-tab text-left px-3 py-2 text-sm rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-gray-300"><i class="fas fa-fire w-5"></i> Firebase Info</button>
+                </div>
+                <!-- Admin Content -->
+                <div class="flex-1 overflow-y-auto p-6 bg-white dark:bg-gray-800">
+                    
+                    <!-- Users History Tab -->
+                    <div id="tab-users" class="admin-pane">
+                        <h4 class="text-lg font-bold mb-4 dark:text-white">User Management</h4>
+                        <div id="admin-user-list" class="space-y-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Models Tab -->
+                    <div id="tab-models" class="admin-pane hidden">
+                        <h4 class="text-lg font-bold mb-4 dark:text-white">Manage Models</h4>
+                        <form id="add-model-form" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6 space-y-3 border dark:border-gray-600">
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="text" id="model-name" placeholder="Model Name (e.g., GPT-4)" required class="px-3 py-2 rounded border dark:bg-gray-800 dark:border-gray-600 dark:text-white">
+                                <input type="text" id="model-version" placeholder="Version (e.g., v1)" required class="px-3 py-2 rounded border dark:bg-gray-800 dark:border-gray-600 dark:text-white">
+                                <select id="model-access" class="px-3 py-2 rounded border dark:bg-gray-800 dark:border-gray-600 dark:text-white">
+                                    <option value="free">Free</option><option value="paid">Pro Only</option>
+                                </select>
+                                <select id="model-expiry" class="px-3 py-2 rounded border dark:bg-gray-800 dark:border-gray-600 dark:text-white">
+                                    <option value="never">Never Expires</option><option value="1d">1 Day</option><option value="7d">7 Days</option>
+                                </select>
+                            </div>
+                            <button type="button" onclick="createModel()" class="px-4 py-2 bg-primary text-white rounded hover:bg-emerald-600 w-full">Create New Model</button>
+                        </form>
+                        <div id="admin-model-list" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Train Data Tab -->
+                    <div id="tab-train" class="admin-pane hidden">
+                        <h4 class="text-lg font-bold mb-4 dark:text-white">Train AI Model Data</h4>
+                        <form id="train-data-form" class="space-y-3 mb-6 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600">
+                            <textarea id="train-input" rows="2" placeholder="User Input Trigger (e.g. 'Hello', 'What is AI')" class="w-full px-3 py-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"></textarea>
+                            <textarea id="train-output" rows="3" placeholder="AI Response text..." class="w-full px-3 py-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"></textarea>
+                            <button type="button" onclick="addTrainData()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full">Add Training Pair</button>
+                        </form>
+                        <div id="admin-train-list" class="space-y-2 max-h-64 overflow-y-auto pr-2"></div>
+                    </div>
+
+                    <!-- Theme Tab -->
+                    <div id="tab-theme" class="admin-pane hidden space-y-4">
+                        <h4 class="text-lg font-bold mb-2 dark:text-white">Global Theme Settings</h4>
+                        <div>
+                            <label class="block text-sm dark:text-gray-300 mb-1">Background Image/GIF URL</label>
+                            <input type="text" id="theme-bg" class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="https://...">
+                        </div>
+                        <div>
+                            <label class="block text-sm dark:text-gray-300 mb-1">Primary Button Color (Hex)</label>
+                            <input type="color" id="theme-btn" class="h-10 w-20 border rounded dark:bg-gray-700 dark:border-gray-600 cursor-pointer">
+                        </div>
+                        <button onclick="saveThemeSettings()" class="px-4 py-2 bg-primary text-white rounded hover:bg-emerald-600">Apply Global Theme</button>
+                    </div>
+
+                    <!-- Announcement Tab -->
+                    <div id="tab-announce" class="admin-pane hidden space-y-4">
+                        <h4 class="text-lg font-bold mb-2 dark:text-white">Global Announcement</h4>
+                        <input type="text" id="ann-name" placeholder="Name/Internal ID" class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <input type="text" id="ann-header" placeholder="Header (e.g., UPDATE)" class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <textarea id="ann-content" placeholder="Announcement text..." class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                        <select id="ann-expiry" class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <option value="never">Never</option><option value="1">1 Day</option>
+                        </select>
+                        <button onclick="createAnnouncement()" class="px-4 py-2 bg-primary text-white rounded hover:bg-emerald-600">Publish Announcement</button>
+                        <button onclick="deleteAnnouncement()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Clear Current Announcement</button>
+                    </div>
+
+                    <!-- Firebase Details Tab -->
+                    <div id="tab-firebase" class="admin-pane hidden space-y-4">
+                        <h4 class="text-lg font-bold mb-2 dark:text-white">Firebase Configuration Info</h4>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Current active configuration parameters.</p>
+                        <pre class="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto" id="firebase-info-dump"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- 6. FIREBASE V8 COMPAT LIBRARIES (Required for zero build / no ES imports) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <!-- 7. APPLICATION LOGIC -->
+    <script>
+        /*************************************************
+         * CONFIGURATION & STATE
+         *************************************************/
+        const firebaseConfig = {
+            apiKey: "AIzaSyBD473HnZjcmuBlEwd7uaI0MB-hKU4_Nfs",
+            authDomain: "knowledge-pro-c9ee5.firebaseapp.com",
+            databaseURL: "https://knowledge-pro-c9ee5-default-rtdb.firebaseio.com",
+            projectId: "knowledge-pro-c9ee5",
+            storageBucket: "knowledge-pro-c9ee5.firebasestorage.app",
+            messagingSenderId: "14035001235",
+            appId: "1:14035001235:web:cb7c8a0d7c0ce48d729266"
+        };
+
+        const state = {
+            user: null,
+            userData: null,
+            currentChatId: null,
+            chats: [],
+            models: [],
+            trainData: {},
+            systemPrompt: "",
+            isGenerating: false,
+            streamingInterval: null,
+        };
+
+        // DOM Elements cache
+        const el = {
+            loading: document.getElementById('loading'),
+            authView: document.getElementById('auth-view'),
+            appView: document.getElementById('app-view'),
+            bannedOverlay: document.getElementById('banned-overlay'),
+            chatInput: document.getElementById('chat-input'),
+            sendBtn: document.getElementById('send-btn'),
+            messages: document.getElementById('messages-container'),
+            welcome: document.getElementById('welcome-screen'),
+            chatList: document.getElementById('chat-list'),
+            sidebar: document.getElementById('sidebar'),
+            sidebarOverlay: document.getElementById('sidebar-overlay'),
+            modelSelector: document.getElementById('model-selector'),
+            adminBtn: document.getElementById('admin-panel-btn'),
+            modalOverlay: document.getElementById('modal-overlay'),
+        };
+
+        /*************************************************
+         * INITIALIZATION & FIREBASE SETUP
+         *************************************************/
+        try {
+            firebase.initializeApp(firebaseConfig);
+            var auth = firebase.auth();
+            var db = firebase.database();
+            
+            // Render Config securely in admin panel
+            document.getElementById('firebase-info-dump').textContent = JSON.stringify({
+                projectId: firebaseConfig.projectId,
+                databaseURL: firebaseConfig.databaseURL,
+                authDomain: firebaseConfig.authDomain
+            }, null, 2);
+
+            // Set up Auth Listener
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    state.user = user;
+                    loadUserDataAndInitApp(user.uid);
+                } else {
+                    state.user = null;
+                    state.userData = null;
+                    showView('auth');
+                }
+            });
+
+            // Initial Theme Setup
+            initDarkMode();
+            listenToGlobalConfigs();
+            
+        } catch (error) {
+            console.error("Firebase init error:", error);
+            alert("Application failed to initialize database.");
+        }
+
+        async function loadUserDataAndInitApp(uid) {
+            try {
+                const snapshot = await db.ref(`users/${uid}`).once('value');
+                if (!snapshot.exists()) {
+                    // Fallback create user if auth exists but DB record doesn't
+                    await db.ref(`users/${uid}`).set({
+                        email: state.user.email,
+                        role: 'user',
+                        banned: false,
+                        displayName: state.user.email.split('@')[0],
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    state.userData = { role: 'user', banned: false, displayName: state.user.email.split('@')[0] };
+                } else {
+                    state.userData = snapshot.val();
+                }
+
+                // Check Ban Status
+                if (state.userData.banned) {
+                    showView('app');
+                    el.bannedOverlay.classList.remove('hidden');
+                    return;
+                } else {
+                    el.bannedOverlay.classList.add('hidden');
+                }
+
+                // Setup UI for User/Admin
+                updateProfileUI();
+                listenToChats();
+                listenToModels();
+                listenToTrainData();
+                showView('app');
+                createNewChat(); // start fresh if empty
+
+            } catch (error) {
+                console.error("Failed to load user data:", error);
+            }
+        }
+
+        function showView(view) {
+            el.loading.style.display = 'none';
+            if (view === 'auth') {
+                el.authView.classList.remove('hidden');
+                el.appView.classList.add('hidden');
+            } else if (view === 'app') {
+                el.authView.classList.add('hidden');
+                el.appView.classList.remove('hidden');
+            }
+        }
+
+        function updateProfileUI() {
+            const name = state.userData.displayName || 'User';
+            document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
+            
+            // Admin Red Tick logic
+            let nameHTML = name;
+            if (state.userData.role === 'admin') {
+                nameHTML += ' <span class="text-red-500 ml-1" title="Admin">✔</span>';
+                el.adminBtn.classList.remove('hidden');
+            } else {
+                el.adminBtn.classList.add('hidden');
+            }
+            
+            document.getElementById('user-display-name').innerHTML = nameHTML;
+            document.getElementById('user-role-display').textContent = state.userData.role === 'admin' ? 'Administrator' : 'User';
+        }
+
+        /*************************************************
+         * GLOBAL CONFIGS (THEME, ANNOUNCEMENTS)
+         *************************************************/
+        function listenToGlobalConfigs() {
+            // Theme
+            db.ref('theme').on('value', snap => {
+                const t = snap.val();
+                if (t) {
+                    if (t.primaryColor) document.documentElement.style.setProperty('--color-primary', t.primaryColor);
+                    if (t.bgImage) {
+                        document.documentElement.style.setProperty('--bg-image', `url(${t.bgImage})`);
+                        document.documentElement.style.setProperty('--bg-opacity', '0.7');
+                    } else {
+                        document.documentElement.style.setProperty('--bg-image', 'none');
+                    }
+                }
+            });
+
+            // Announcement
+            db.ref('announcement').on('value', snap => {
+                const ann = snap.val();
+                const banner = document.getElementById('announcement-banner');
+                if (ann && ann.active) {
+                    // check expiry
+                    if (ann.expiry !== 'never' && Date.now() > ann.expiryTime) {
+                        banner.classList.add('hidden');
+                        return;
+                    }
+                    document.getElementById('announce-header').textContent = ann.header;
+                    document.getElementById('announce-content').textContent = ann.content;
+                    
+                    // Allow user close state via sessionStorage
+                    if (!sessionStorage.getItem(`closed_ann_${ann.id}`)) {
+                        banner.classList.remove('hidden');
+                    }
+                } else {
+                    banner.classList.add('hidden');
+                }
+            });
+        }
+
+        function closeAnnouncement() {
+            document.getElementById('announcement-banner').classList.add('hidden');
+            // Check if there's an active announcement to store its ID
+            db.ref('announcement').once('value').then(snap => {
+                const ann = snap.val();
+                if (ann) sessionStorage.setItem(`closed_ann_${ann.id}`, 'true');
+            });
+        }
+
+        /*************************************************
+         * AUTHENTICATION LOGIC
+         *************************************************/
+        function toggleAuth(type) {
+            if (type === 'login') {
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('register-form').classList.add('hidden');
+            } else {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('register-form').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            const errEl = document.getElementById('login-error');
+            try {
+                errEl.classList.add('hidden');
+                await auth.signInWithEmailAndPassword(email, pass);
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-password').value;
+            const errEl = document.getElementById('reg-error');
+            try {
+                errEl.classList.add('hidden');
+                const cred = await auth.createUserWithEmailAndPassword(email, pass);
+                // Create user profile in DB
+                await db.ref(`users/${cred.user.uid}`).set({
+                    email: email, role: 'user', banned: false, displayName: name, createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('hidden');
+            }
+        });
+
+        function logout() { auth.signOut(); }
+
+        /*************************************************
+         * CHAT & UI LOGIC
+         *************************************************/
+        function initDarkMode() {
+            const isDark = localStorage.getItem('theme') === 'dark';
+            if (isDark) document.documentElement.classList.add('dark');
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        }
+
+        function toggleSidebar() {
+            el.sidebar.classList.toggle('-translate-x-full');
+            el.sidebarOverlay.classList.toggle('hidden');
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function listenToChats() {
+            db.ref(`chats/${state.user.uid}`).orderByChild('updatedAt').on('value', snapshot => {
+                state.chats = [];
+                el.chatList.innerHTML = '';
+                snapshot.forEach(child => {
+                    const chat = { id: child.key, ...child.val() };
+                    state.chats.push(chat);
+                });
+                // Sort descending by updatedAt
+                state.chats.sort((a, b) => b.updatedAt - a.updatedAt);
+                renderChatList();
+            });
+        }
+
+        function renderChatList() {
+            el.chatList.innerHTML = '';
+            state.chats.forEach(chat => {
+                const isDeletedByAdmin = chat.deletedByAdmin;
+                const div = document.createElement('div');
+                div.className = `group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition ${state.currentChatId === chat.id ? 'bg-gray-200 dark:bg-gray-700' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`;
+                
+                div.innerHTML = `
+                    <div class="flex-1 truncate text-sm font-medium dark:text-gray-200" onclick="loadChat('${chat.id}')">
+                        <i class="far fa-message mr-2 text-gray-400"></i>
+                        ${isDeletedByAdmin ? '<span class="text-red-500 italic">Deleted by admin</span>' : escapeHtml(chat.title || 'New Chat')}
+                    </div>
+                    <button onclick="deleteChat('${chat.id}', event)" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-1 transition"><i class="fas fa-trash-alt text-xs"></i></button>
+                `;
+                el.chatList.appendChild(div);
+            });
+        }
+
+        async function createNewChat() {
+            if (window.innerWidth < 1024) toggleSidebar();
+            const newRef = db.ref(`chats/${state.user.uid}`).push();
+            state.currentChatId = newRef.key;
+            await newRef.set({ title: 'New Chat', messages: [], updatedAt: firebase.database.ServerValue.TIMESTAMP });
+            el.messages.innerHTML = '';
+            el.welcome.style.display = 'flex';
+        }
+
+        async function loadChat(chatId) {
+            if (window.innerWidth < 1024) toggleSidebar();
+            if(state.isGenerating) return; // Prevent switching while generating
+            
+            state.currentChatId = chatId;
+            renderChatList(); // update active class
+            
+            const chat = state.chats.find(c => c.id === chatId);
+            el.messages.innerHTML = '';
+            
+            if (chat && chat.deletedByAdmin) {
+                el.welcome.style.display = 'none';
+                el.messages.innerHTML = `<div class="p-4 bg-red-100 text-red-700 rounded-lg border border-red-300 mx-auto max-w-2xl mt-10 text-center font-bold"><i class="fas fa-exclamation-triangle mr-2"></i> This chat was deleted by an admin.</div>`;
+                return;
+            }
+
+            if (chat && chat.messages) {
+                el.welcome.style.display = 'none';
+                chat.messages.forEach(msg => renderMessageUI(msg.role, msg.content, false));
+                scrollToBottom();
+            } else {
+                el.welcome.style.display = 'flex';
+            }
+        }
+
+        async function deleteChat(chatId, e) {
+            e.stopPropagation();
+            if(confirm('Delete this chat?')) {
+                await db.ref(`chats/${state.user.uid}/${chatId}`).remove();
+                if(state.currentChatId === chatId) createNewChat();
+            }
+        }
+        
+        async function clearCurrentChat() {
+            if(state.currentChatId) {
+                await db.ref(`chats/${state.user.uid}/${state.currentChatId}`).remove();
+                createNewChat();
+            }
+        }
+
+        /*************************************************
+         * MESSAGING & AI STREAMING LOGIC
+         *************************************************/
+        async function sendMessage() {
+            const text = el.chatInput.value.trim();
+            if (!text || state.isGenerating) return;
+            if (!state.currentChatId) await createNewChat();
+
+            // Check if current chat is deleted
+            const chatObj = state.chats.find(c => c.id === state.currentChatId);
+            if(chatObj && chatObj.deletedByAdmin) { alert("Chat deleted by admin."); return; }
+
+            el.chatInput.value = '';
+            el.chatInput.style.height = 'auto';
+            el.welcome.style.display = 'none';
+            state.isGenerating = true;
+            el.sendBtn.disabled = true;
+
+            // Render User Message
+            renderMessageUI('user', text, false);
+            await saveMessageToDB('user', text);
+            scrollToBottom();
+
+            // Prepare AI Box
+            const aiMsgBoxId = 'msg-' + Date.now();
+            renderMessageUI('ai', '', true, aiMsgBoxId);
+            scrollToBottom();
+
+            // Get response based on Model & Train Data
+            const selectedModelId = el.modelSelector.value;
+            const modelObj = state.models.find(m => m.id === selectedModelId);
+            
+            // Check Model Access
+            if (modelObj && modelObj.access === 'paid' && state.userData.role !== 'admin') {
+                finalizeAiMessage(aiMsgBoxId, "⚠️ **Access Denied.** This is a Pro model. You do not have permission to use it.");
+                return;
+            }
+
+            // Simulate Network / Search Train Data
+            setTimeout(() => {
+                let response = generateResponseFromTrainData(text, modelObj);
+                if(state.systemPrompt) {
+                    response = `*(System: ${state.systemPrompt})*\n\n` + response;
+                }
+                streamAiResponse(aiMsgBoxId, response);
+            }, 600);
+        }
+
+        function generateResponseFromTrainData(text, activeModel) {
+            const lowerText = text.toLowerCase();
+            let match = null;
+            
+            // Basic trained logic matching
+            const dataArr = Object.values(state.trainData);
+            for(let d of dataArr) {
+                const triggers = d.input.toLowerCase().split(',');
+                if(triggers.some(t => lowerText.includes(t.trim()))) {
+                    match = d.output;
+                    break;
+                }
+            }
+
+            if (match) return match;
+            
+            // Fallback default logic
+            return `I am Knowledge Pro (Model: ${activeModel ? activeModel.name : 'Default'}). My knowledge relies on the training data provided by administrators. I don't have a specific answer for "${text}".`;
+        }
+
+        function streamAiResponse(boxId, fullText) {
+            const contentDiv = document.getElementById(boxId + '-content');
+            let index = 0;
+            let currentText = '';
+            
+            contentDiv.classList.add('cursor');
+
+            state.streamingInterval = setInterval(() => {
+                if (index < fullText.length) {
+                    currentText += fullText.charAt(index);
+                    // Render raw text during typing to avoid markdown HTML breaking
+                    contentDiv.textContent = currentText;
+                    index++;
+                    scrollToBottom();
+                } else {
+                    clearInterval(state.streamingInterval);
+                    contentDiv.classList.remove('cursor');
+                    // Final parse with marked
+                    contentDiv.innerHTML = marked.parse(fullText);
+                    finalizeAiMessage(boxId, fullText);
+                }
+            }, 15); // streaming speed
+        }
+
+        async function finalizeAiMessage(boxId, fullText) {
+            state.isGenerating = false;
+            el.sendBtn.disabled = false;
+            
+            // Auto-title if first message
+            const currentChat = state.chats.find(c => c.id === state.currentChatId);
+            if (currentChat && (!currentChat.messages || currentChat.messages.length <= 1)) {
+                const titleText = fullText.substring(0, 20) + '...';
+                await db.ref(`chats/${state.user.uid}/${state.currentChatId}`).update({ title: titleText });
+            }
+
+            await saveMessageToDB('ai', fullText);
+        }
+
+        async function saveMessageToDB(role, content) {
+            if(!state.currentChatId) return;
+            const chatRef = db.ref(`chats/${state.user.uid}/${state.currentChatId}`);
+            const chatSnap = await chatRef.once('value');
+            const data = chatSnap.val() || { messages: [] };
+            const msgs = data.messages || [];
+            msgs.push({ role, content, timestamp: Date.now() });
+            await chatRef.update({ messages: msgs, updatedAt: firebase.database.ServerValue.TIMESTAMP });
+        }
+
+        function renderMessageUI(role, content, isStreaming = false, boxId = null) {
+            const wrap = document.createElement('div');
+            wrap.className = `flex gap-4 max-w-4xl mx-auto ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            let html = '';
+            if (role === 'user') {
+                html = `<div class="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 px-5 py-3 rounded-2xl max-w-[80%] break-words whitespace-pre-wrap">${escapeHtml(content)}</div>`;
+            } else {
+                html = `
+                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white shrink-0 mt-1 shadow">
+                        <i class="fas fa-robot text-sm"></i>
+                    </div>
+                    <div class="flex-1 max-w-[85%] prose dark:prose-invert prose-emerald min-w-0 break-words" id="${boxId ? boxId + '-content' : ''}">
+                        ${isStreaming ? '' : marked.parse(content)}
+                    </div>
+                `;
+            }
+            wrap.innerHTML = html;
+            el.messages.appendChild(wrap);
+        }
+
+        function scrollToBottom() {
+            el.messages.scrollTop = el.messages.scrollHeight;
+        }
+
+        /*************************************************
+         * ADMIN & SETTINGS MODALS LOGIC
+         *************************************************/
+        function openModal(modalId) {
+            el.modalOverlay.classList.remove('hidden');
+            document.querySelectorAll('.modal-content').forEach(m => m.classList.add('hidden'));
+            document.getElementById(modalId).classList.remove('hidden');
+            
+            if(modalId === 'admin-modal') {
+                switchAdminTab('tab-users');
+                loadAdminData();
+            }
+        }
+
+        function closeModal() {
+            el.modalOverlay.classList.add('hidden');
+        }
+
+        // Settings
+        function saveSettings() {
+            state.systemPrompt = document.getElementById('setting-system-prompt').value;
+            alert("Settings Saved!");
+            closeModal();
+        }
+
+        // Admin Tabs
+        function switchAdminTab(tabId) {
+            document.querySelectorAll('.admin-pane').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.admin-tab').forEach(t => {
+                t.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'font-bold', 'dark:text-white');
+                t.classList.add('hover:bg-gray-200', 'dark:hover:bg-gray-700', 'dark:text-gray-300');
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            event.currentTarget.classList.add('bg-gray-200', 'dark:bg-gray-700', 'font-bold', 'dark:text-white');
+            event.currentTarget.classList.remove('hover:bg-gray-200', 'dark:hover:bg-gray-700', 'dark:text-gray-300');
+        }
+
+        async function loadAdminData() {
+            if (state.userData.role !== 'admin') return;
+            
+            // Load Users
+            db.ref('users').once('value', snap => {
+                const list = document.getElementById('admin-user-list');
+                list.innerHTML = '';
+                snap.forEach(child => {
+                    const u = child.val();
+                    const uid = child.key;
+                    list.innerHTML += `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600">
+                            <div>
+                                <p class="font-bold dark:text-white">${escapeHtml(u.displayName)} ${u.role==='admin'?'<span class="text-red-500 text-xs">Admin</span>':''}</p>
+                                <p class="text-xs text-gray-500">${u.email} | Status: ${u.banned ? '<span class="text-red-500">Banned</span>' : 'Active'}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                ${uid !== state.user.uid ? `<button onclick="toggleBan('${uid}', ${u.banned})" class="px-2 py-1 text-xs rounded bg-yellow-500 text-white hover:bg-yellow-600">${u.banned ? 'Unban' : 'Ban'}</button>` : ''}
+                                ${uid !== state.user.uid ? `<button onclick="toggleAdmin('${uid}', '${u.role}')" class="px-2 py-1 text-xs rounded bg-purple-500 text-white hover:bg-purple-600">${u.role==='admin' ? 'Remove Admin' : 'Make Admin'}</button>` : ''}
+                                <button onclick="adminDeleteUserHistory('${uid}')" class="px-2 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600">Del History</button>
+                            </div>
+                        </div>`;
+                });
+            });
+
+            // Theme pre-fill
+            db.ref('theme').once('value', snap => {
+                const t = snap.val() || {};
+                if(t.primaryColor) document.getElementById('theme-btn').value = t.primaryColor;
+                if(t.bgImage) document.getElementById('theme-bg').value = t.bgImage;
+            });
+        }
+
+        // Admin Actions
+        async function toggleBan(uid, currentStatus) {
+            await db.ref(`users/${uid}/banned`).set(!currentStatus);
+            loadAdminData();
+        }
+
+        async function toggleAdmin(uid, currentRole) {
+            await db.ref(`users/${uid}/role`).set(currentRole === 'admin' ? 'user' : 'admin');
+            loadAdminData();
+        }
+
+        async function adminDeleteUserHistory(uid) {
+            if(confirm("Delete all chat history for this user?")) {
+                const chatsRef = db.ref(`chats/${uid}`);
+                const snap = await chatsRef.once('value');
+                snap.forEach(c => {
+                    c.ref.update({ deletedByAdmin: true, messages: [] });
+                });
+                alert("History deleted and flagged.");
+            }
+        }
+
+        // Admin Models
+        function listenToModels() {
+            db.ref('models').on('value', snap => {
+                state.models = [];
+                el.modelSelector.innerHTML = '<option value="default">Default Model</option>';
+                const adminList = document.getElementById('admin-model-list');
+                if(adminList) adminList.innerHTML = '';
+
+                snap.forEach(child => {
+                    const m = { id: child.key, ...child.val() };
+                    state.models.push(m);
+                    
+                    // User Selector
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.name} (${m.version}) ${m.access === 'paid'?'[PRO]':''}`;
+                    el.modelSelector.appendChild(opt);
+
+                    // Admin UI
+                    if (adminList) {
+                        adminList.innerHTML += `
+                            <div class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded">
+                                <div><strong class="dark:text-white">${m.name}</strong> <span class="text-xs text-gray-500">${m.version} | ${m.access}</span></div>
+                                <button onclick="deleteModel('${m.id}')" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+                            </div>`;
+                    }
+                });
+            });
+        }
+
+        async function createModel() {
+            const name = document.getElementById('model-name').value;
+            const version = document.getElementById('model-version').value;
+            const access = document.getElementById('model-access').value;
+            const expiry = document.getElementById('model-expiry').value;
+            if(!name || !version) return;
+
+            await db.ref('models').push({ name, version, access, expiry, createdAt: Date.now() });
+            document.getElementById('add-model-form').reset();
+        }
+
+        async function deleteModel(id) {
+            await db.ref(`models/${id}`).remove();
+        }
+
+        // Train Data
+        function listenToTrainData() {
+            db.ref('trainData').on('value', snap => {
+                state.trainData = snap.val() || {};
+                const list = document.getElementById('admin-train-list');
+                if(!list) return;
+                list.innerHTML = '';
+                
+                Object.entries(state.trainData).forEach(([key, val]) => {
+                    list.innerHTML += `
+                        <div class="p-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-800 mb-2">
+                            <div class="flex justify-between">
+                                <strong class="text-sm dark:text-gray-300">Trigger: ${escapeHtml(val.input)}</strong>
+                                <button onclick="deleteTrainData('${key}')" class="text-red-500 text-xs"><i class="fas fa-trash"></i></button>
+                            </div>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1 truncate">${escapeHtml(val.output)}</p>
+                        </div>`;
+                });
+            });
+        }
+
+        async function addTrainData() {
+            const i = document.getElementById('train-input').value;
+            const o = document.getElementById('train-output').value;
+            if(!i || !o) return;
+            await db.ref('trainData').push({ input: i, output: o });
+            document.getElementById('train-data-form').reset();
+        }
+
+        async function deleteTrainData(id) { await db.ref(`trainData/${id}`).remove(); }
+
+        // Theme Saving
+        async function saveThemeSettings() {
+            const bg = document.getElementById('theme-bg').value;
+            const btn = document.getElementById('theme-btn').value;
+            await db.ref('theme').set({ bgImage: bg, primaryColor: btn });
+            alert("Theme settings saved globally!");
+        }
+
+        // Announcement Logic
+        async function createAnnouncement() {
+            const id = document.getElementById('ann-name').value || 'ann_' + Date.now();
+            const header = document.getElementById('ann-header').value;
+            const content = document.getElementById('ann-content').value;
+            const expiryVal = document.getElementById('ann-expiry').value;
+            
+            let expiryTime = 'never';
+            if(expiryVal !== 'never') {
+                expiryTime = Date.now() + (parseInt(expiryVal) * 24 * 60 * 60 * 1000);
+            }
+
+            await db.ref('announcement').set({ id, header, content, expiryTime, expiry: expiryVal, active: true });
+            alert("Announcement published!");
+        }
+
+        async function deleteAnnouncement() {
+            await db.ref('announcement/active').set(false);
+            alert("Announcement removed.");
+        }
+
+        /*************************************************
+         * UTILS
+         *************************************************/
+        function escapeHtml(unsafe) {
+            return (unsafe||'').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+    </script>
+</body>
+</html>
