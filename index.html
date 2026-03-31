@@ -716,20 +716,11 @@ body{font-family:'Nunito',sans-serif;background:var(--dark);color:var(--text);mi
 // ══════════════════════════════════════
 // AUTH GUARD
 // ══════════════════════════════════════
-if(!sessionStorage.getItem('painbot_auth')){
-  window.location.href='index.html';
+
 }
 // Session timeout: 8 hours
-const loginTime = parseInt(sessionStorage.getItem('painbot_time')||0);
-if(Date.now() - loginTime > 8*60*60*1000){
-  sessionStorage.clear();
-  window.location.href='index.html';
-}
 
-function doLogout(){
-  sessionStorage.clear();
-  window.location.href='index.html';
-}
+  
 
 // ══════════════════════════════════════
 // FIREBASE INIT (Realtime SDK)
