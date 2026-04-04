@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Knowledge Pro — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+  <style>
+    :root {
+      --bg:        #080c10;
+      --bg2:       #0d1117;
+      --surface:   #111820;
+      --surface2:  #161e28;
+      --border:    rgba(0,200,150,0.12);
+      --accent:    #00c896;
+      --accent2:   #00e6b0;
+      --accentD:   #007a5c;
+      --danger:    #ff4d6d;
+      --warn:      #ffb800;
+      --info:      #38bdf8;
+      --text:      #d4e0eb;
+      --textM:     #5a7080;
+      --radius:    12px;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Outfit', sans-serif;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+
+    /* ── GRID NOISE TEXTURE ── */
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:
+        linear-gradient(rgba(0,200,150,0.03) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(0,200,150,0.03) 1px,transparent 1px);
+      background-size:40px 40px;
+      pointer-events:none;z-index:0;
+    }
+
+    /* ── LOGIN SCREEN ── */
+    #login-screen{
+      position:fixed;inset:0;z-index:1000;
+      background:var(--bg);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .login-box{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:20px;
+      padding:48px 44px;
+      width:100%;max-width:420px;
+      position:relative;
+      box-shadow:0 0 80px rgba(0,200,150,0.05);
+    }
+    .login-box::before{
+      content:'';position:absolute;top:-1px;left:20%;right:20%;
+      height:1px;
+      background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    }
+    .login-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(0,200,150,0.08);
+      border:1px solid rgba(0,200,150,0.2);
+      border-radius:50px;
+      padding:6px 14px;font-size:11px;
+      font-family:var(--mono);letter-spacing:2px;
+      color:var(--accent);text-transform:uppercase;
+      margin-bottom:24px;
+    }
+    .login-title{font-size:28px;font-weight:800;margin-bottom:6px;}
+    .login-sub{font-size:13px;color:var(--textM);margin-bottom:32px;}
+    .f-group{margin-bottom:18px;}
+    .f-label{display:block;font-size:11px;font-family:var(--mono);letter-spacing:1.5px;text-transform:uppercase;color:var(--textM);margin-bottom:8px;}
+    .f-input{
+      width:100%;padding:12px 16px;
+      background:var(--bg2);border:1px solid var(--border);
+      border-radius:10px;color:var(--text);
+      font-family:var(--sans);font-size:14px;outline:none;
+      transition:border-color .25s,box-shadow .25s;
+    }
+    .f-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,200,150,0.1);}
+    .f-input::placeholder{color:var(--textM);}
+    .btn-login{
+      width:100%;padding:13px;margin-top:8px;
+      background:linear-gradient(135deg,var(--accentD),var(--accent));
+      border:none;border-radius:10px;color:#000;
+      font-family:var(--sans);font-size:14px;font-weight:700;
+      cursor:pointer;transition:all .25s;letter-spacing:.5px;
+    }
+    .btn-login:hover{filter:brightness(1.1);transform:translateY(-1px);}
+    .login-err{
+      font-size:12px;color:var(--danger);margin-top:12px;
+      text-align:center;display:none;
+    }
+    .login-hint{font-size:11px;color:var(--textM);text-align:center;margin-top:16px;}
+
+    /* ── MAIN LAYOUT ── */
+    #app{display:none;position:relative;z-index:1;}
+    .shell{display:flex;min-height:100vh;}
+
+    /* ── SIDEBAR ── */
+    .sidebar{
+      width:240px;min-height:100vh;
+      background:var(--surface);
+      border-right:1px solid var(--border);
+      display:flex;flex-direction:column;
+      padding:24px 0;
+      position:sticky;top:0;
+      flex-shrink:0;
+    }
+    .sb-brand{
+      padding:0 20px 28px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:16px;
+    }
+    .sb-logo{
+      display:flex;align-items:center;gap:10px;
+    }
+    .sb-logo-icon{
+      width:36px;height:36px;
+      background:linear-gradient(135deg,var(--accentD),var(--accent));
+      border-radius:9px;display:flex;align-items:center;justify-content:center;
+      font-weight:800;font-size:14px;color:#000;font-family:var(--mono);
+    }
+    .sb-logo-name{font-size:15px;font-weight:700;}
+    .sb-logo-sub{font-size:10px;color:var(--textM);font-family:var(--mono);letter-spacing:1px;margin-top:1px;}
+    .sb-label{font-size:10px;font-family:var(--mono);letter-spacing:2px;text-transform:uppercase;color:var(--textM);padding:0 20px;margin:12px 0 6px;}
+    .sb-item{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 20px;font-size:13px;font-weight:500;
+      color:var(--textM);cursor:pointer;
+      transition:all .2s;border-left:3px solid transparent;
+    }
+    .sb-item:hover{color:var(--text);background:rgba(0,200,150,0.05);}
+    .sb-item.active{color:var(--accent);background:rgba(0,200,150,0.08);border-left-color:var(--accent);}
+    .sb-item-icon{font-size:16px;width:20px;text-align:center;}
+    .sb-bottom{margin-top:auto;padding:16px 20px 0;border-top:1px solid var(--border);}
+    .sb-user{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 12px;background:var(--surface2);
+      border-radius:10px;border:1px solid var(--border);
+    }
+    .sb-user-av{
+      width:32px;height:32px;border-radius:50%;
+      background:linear-gradient(135deg,var(--accentD),var(--accent));
+      display:flex;align-items:center;justify-content:center;
+      font-size:13px;font-weight:700;color:#000;
+    }
+    .sb-user-name{font-size:13px;font-weight:600;flex:1;}
+    .sb-user-role{font-size:10px;color:var(--textM);font-family:var(--mono);}
+    .btn-sign-out{
+      width:100%;margin-top:10px;padding:9px;
+      background:transparent;border:1px solid rgba(255,77,109,0.3);
+      border-radius:8px;color:var(--danger);
+      font-size:12px;font-family:var(--sans);
+      cursor:pointer;transition:all .2s;font-weight:500;
+    }
+    .btn-sign-out:hover{background:rgba(255,77,109,0.1);}
+
+    /* ── MAIN CONTENT ── */
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 32px;height:64px;
+      background:rgba(8,12,16,0.8);backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:50;
+    }
+    .topbar-title{font-size:18px;font-weight:700;}
+    .topbar-right{display:flex;align-items:center;gap:12px;}
+    .topbar-badge{
+      display:flex;align-items:center;gap:6px;
+      font-size:11px;font-family:var(--mono);
+      padding:6px 12px;border-radius:50px;
+    }
+    .badge-dot{width:6px;height:6px;border-radius:50%;animation:blink 2s infinite;}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+    .badge-online{background:rgba(0,200,150,0.1);color:var(--accent);}
+    .badge-dot-green{background:var(--accent);}
+
+    /* ── PANELS ── */
+    .panel{display:none;padding:32px;}
+    .panel.active{display:block;}
+
+    /* ── STATS ROW ── */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+    .stat-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:20px;
+      position:relative;overflow:hidden;
+    }
+    .stat-card::after{
+      content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    }
+    .stat-card.green::after{background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+    .stat-card.blue::after{background:linear-gradient(90deg,transparent,var(--info),transparent);}
+    .stat-card.warn::after{background:linear-gradient(90deg,transparent,var(--warn),transparent);}
+    .stat-card.red::after{background:linear-gradient(90deg,transparent,var(--danger),transparent);}
+    .stat-icon{font-size:24px;margin-bottom:12px;}
+    .stat-value{font-size:28px;font-weight:800;font-family:var(--mono);margin-bottom:4px;}
+    .stat-label{font-size:11px;color:var(--textM);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);}
+
+    /* ── CARDS ── */
+    .card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);overflow:hidden;
+      margin-bottom:24px;
+    }
+    .card-header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:18px 24px;border-bottom:1px solid var(--border);
+    }
+    .card-title{font-size:15px;font-weight:700;}
+    .card-sub{font-size:12px;color:var(--textM);margin-top:2px;}
+    .card-body{padding:24px;}
+
+    /* ── BUTTONS ── */
+    .btn{
+      padding:10px 20px;border-radius:9px;font-family:var(--sans);
+      font-size:13px;font-weight:600;cursor:pointer;
+      transition:all .2s;border:none;display:inline-flex;
+      align-items:center;gap:8px;
+    }
+    .btn-primary{background:var(--accent);color:#000;}
+    .btn-primary:hover{filter:brightness(1.1);}
+    .btn-danger{background:rgba(255,77,109,0.15);color:var(--danger);border:1px solid rgba(255,77,109,0.3);}
+    .btn-danger:hover{background:rgba(255,77,109,0.25);}
+    .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-sm{padding:7px 14px;font-size:12px;}
+    .btn-warn{background:rgba(255,184,0,0.15);color:var(--warn);border:1px solid rgba(255,184,0,0.3);}
+    .btn-warn:hover{background:rgba(255,184,0,0.25);}
+
+    /* ── UPLOAD ZONE ── */
+    .upload-zone{
+      border:2px dashed rgba(0,200,150,0.25);
+      border-radius:16px;padding:48px 24px;
+      text-align:center;cursor:pointer;
+      transition:all .3s;background:rgba(0,200,150,0.02);
+      position:relative;
+    }
+    .upload-zone:hover,.upload-zone.drag{
+      border-color:var(--accent);
+      background:rgba(0,200,150,0.06);
+    }
+    .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+    .upload-icon{font-size:48px;margin-bottom:16px;}
+    .upload-title{font-size:18px;font-weight:700;margin-bottom:8px;}
+    .upload-sub{font-size:13px;color:var(--textM);margin-bottom:20px;}
+    .upload-types{
+      display:inline-flex;gap:8px;
+    }
+    .upload-type-badge{
+      padding:4px 12px;border-radius:50px;
+      background:var(--surface2);border:1px solid var(--border);
+      font-size:11px;font-family:var(--mono);color:var(--textM);
+    }
+
+    /* ── JSON PREVIEW ── */
+    .json-preview{
+      background:var(--bg2);border:1px solid var(--border);
+      border-radius:10px;padding:20px;
+      font-family:var(--mono);font-size:12px;
+      max-height:300px;overflow:auto;
+      line-height:1.7;
+      white-space:pre-wrap;word-break:break-all;
+    }
+    .json-key{color:#79c0ff;}
+    .json-str{color:#a5d6a7;}
+    .json-num{color:#f2a365;}
+    .json-bool{color:#ff7b72;}
+
+    /* ── PROGRESS BAR ── */
+    .progress-wrap{
+      background:var(--surface2);border-radius:50px;
+      height:6px;overflow:hidden;margin:12px 0;
+    }
+    .progress-bar{
+      height:100%;background:linear-gradient(90deg,var(--accentD),var(--accent));
+      border-radius:50px;transition:width .4s ease;width:0%;
+    }
+    .progress-text{font-size:12px;color:var(--textM);font-family:var(--mono);}
+
+    /* ── TABLE ── */
+    .data-table{width:100%;border-collapse:collapse;}
+    .data-table th{
+      text-align:left;padding:12px 16px;
+      font-size:10px;font-family:var(--mono);
+      letter-spacing:1.5px;text-transform:uppercase;
+      color:var(--textM);border-bottom:1px solid var(--border);
+    }
+    .data-table td{
+      padding:12px 16px;font-size:13px;
+      border-bottom:1px solid rgba(255,255,255,0.04);
+      vertical-align:middle;
+    }
+    .data-table tr:hover td{background:rgba(0,200,150,0.03);}
+    .data-table tr:last-child td{border-bottom:none;}
+    .td-id{font-family:var(--mono);font-size:11px;color:var(--textM);}
+    .td-cat{
+      padding:3px 10px;border-radius:50px;font-size:11px;
+      font-family:var(--mono);font-weight:500;
+      display:inline-block;
+    }
+    .cat-greetings{background:rgba(0,200,150,0.1);color:var(--accent);}
+    .cat-basic_questions{background:rgba(56,189,248,0.1);color:var(--info);}
+    .cat-fallback{background:rgba(255,184,0,0.1);color:var(--warn);}
+    .td-patterns{font-size:11px;color:var(--textM);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .td-response{font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .td-actions{display:flex;gap:6px;}
+
+    /* ── EDIT MODAL ── */
+    .modal-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,0.7);
+      backdrop-filter:blur(6px);z-index:500;
+      display:flex;align-items:center;justify-content:center;
+      display:none;
+    }
+    .modal-overlay.show{display:flex;}
+    .modal{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:20px;width:100%;max-width:560px;
+      max-height:90vh;overflow-y:auto;
+      padding:32px;
+      animation:modalIn .25s ease;
+    }
+    @keyframes modalIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    .modal-title{font-size:18px;font-weight:800;margin-bottom:24px;}
+    .modal-grid{display:grid;gap:16px;}
+    .textarea-input{
+      width:100%;padding:12px 16px;min-height:90px;
+      background:var(--bg2);border:1px solid var(--border);
+      border-radius:10px;color:var(--text);
+      font-family:var(--sans);font-size:13px;outline:none;
+      resize:vertical;transition:border-color .25s;
+    }
+    .textarea-input:focus{border-color:var(--accent);}
+    .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;}
+
+    /* ── TOAST ── */
+    .toast-stack{
+      position:fixed;bottom:24px;right:24px;
+      z-index:9999;display:flex;flex-direction:column;gap:10px;
+    }
+    .toast{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:12px;padding:14px 18px;
+      font-size:13px;min-width:260px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.4);
+      display:flex;align-items:center;gap:10px;
+      animation:toastIn .3s cubic-bezier(.16,1,.3,1);
+    }
+    @keyframes toastIn{from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:translateX(0);}}
+    .toast.success{border-color:rgba(0,200,150,0.4);}
+    .toast.error  {border-color:rgba(255,77,109,0.4);}
+    .toast.info   {border-color:rgba(56,189,248,0.4);}
+    .toast-icon{font-size:18px;}
+    .toast-msg{flex:1;}
+
+    /* ── FIREBASE CONFIG PANEL ── */
+    .config-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .config-note{
+      background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.2);
+      border-radius:10px;padding:16px;margin-bottom:20px;
+      font-size:13px;color:var(--info);line-height:1.6;
+    }
+
+    /* ── SEARCH BAR ── */
+    .search-bar{
+      display:flex;align-items:center;gap:10px;
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:10px;padding:10px 16px;
+      margin-bottom:20px;
+    }
+    .search-icon{color:var(--textM);font-size:16px;}
+    .search-input{
+      flex:1;background:transparent;border:none;outline:none;
+      color:var(--text);font-family:var(--sans);font-size:14px;
+    }
+    .search-input::placeholder{color:var(--textM);}
+    .search-count{font-size:12px;color:var(--textM);font-family:var(--mono);}
+
+    /* ── EMPTY STATE ── */
+    .empty-state{text-align:center;padding:64px 24px;color:var(--textM);}
+    .empty-icon{font-size:48px;margin-bottom:16px;}
+    .empty-text{font-size:15px;}
+
+    ::-webkit-scrollbar{width:4px;height:4px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+    @media(max-width:768px){
+      .sidebar{display:none;}
+      .stats-row{grid-template-columns:1fr 1fr;}
+      .config-grid{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     LOGIN
+════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-badge">⚡ Admin Access Only</div>
+    <h1 class="login-title">Knowledge Pro</h1>
+    <p class="login-sub">Sign in to manage your AI knowledge base</p>
+    <div class="f-group">
+      <label class="f-label">Email</label>
+      <input class="f-input" type="email" id="adm-email" placeholder="admin@example.com"/>
+    </div>
+    <div class="f-group">
+      <label class="f-label">Password</label>
+      <input class="f-input" type="password" id="adm-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()"/>
+    </div>
+    <button class="btn-login" onclick="adminLogin()">Sign In →</button>
+    <p class="login-err" id="login-err"></p>
+    <p class="login-hint">🔒 Secured by Firebase Authentication</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MAIN APP
+════════════════════════════════════ -->
+<div id="app">
+  <div class="shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sb-brand">
+        <div class="sb-logo">
+          <div class="sb-logo-icon">K</div>
+          <div>
+            <div class="sb-logo-name">Knowledge Pro</div>
+            <div class="sb-logo-sub">Admin Panel</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-label">Main</div>
+      <div class="sb-item active" data-panel="dashboard" onclick="switchPanel(this)">
+        <span class="sb-item-icon">📊</span> Dashboard
+      </div>
+      <div class="sb-item" data-panel="upload" onclick="switchPanel(this)">
+        <span class="sb-item-icon">📤</span> Upload Dataset
+      </div>
+      <div class="sb-item" data-panel="entries" onclick="switchPanel(this)">
+        <span class="sb-item-icon">📋</span> Manage Entries
+      </div>
+      <div class="sb-label">System</div>
+      <div class="sb-item" data-panel="config" onclick="switchPanel(this)">
+        <span class="sb-item-icon">⚙️</span> Firebase Config
+      </div>
+      <div class="sb-item" data-panel="test" onclick="switchPanel(this)">
+        <span class="sb-item-icon">🧪</span> Test AI
+      </div>
+
+      <div class="sb-bottom">
+        <div class="sb-user">
+          <div class="sb-user-av" id="sb-av">A</div>
+          <div>
+            <div class="sb-user-name" id="sb-name">Admin</div>
+            <div class="sb-user-role">ADMINISTRATOR</div>
+          </div>
+        </div>
+        <button class="btn-sign-out" onclick="adminLogout()">Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <!-- Top Bar -->
+      <div class="topbar">
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-right">
+          <div class="topbar-badge badge-online">
+            <span class="badge-dot badge-dot-green"></span>
+            Firebase Connected
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DASHBOARD PANEL ── -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="stats-row">
+          <div class="stat-card green">
+            <div class="stat-icon">📚</div>
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-label">Total Entries</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-icon">👋</div>
+            <div class="stat-value" id="stat-greet">0</div>
+            <div class="stat-label">Greetings</div>
+          </div>
+          <div class="stat-card warn">
+            <div class="stat-icon">❓</div>
+            <div class="stat-value" id="stat-basic">0</div>
+            <div class="stat-label">Basic Questions</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-icon">🔄</div>
+            <div class="stat-value" id="stat-fallback">0</div>
+            <div class="stat-label">Fallback</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Recent Activity</div>
+              <div class="card-sub">Last dataset operations</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="refreshData()">↻ Refresh</button>
+          </div>
+          <div class="card-body">
+            <div id="activity-log">
+              <div class="empty-state">
+                <div class="empty-icon">📂</div>
+                <div class="empty-text">No activity yet. Upload a dataset to get started.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Quick Actions</div>
+            </div>
+          </div>
+          <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="switchPanelById('upload')">📤 Upload New Dataset</button>
+            <button class="btn btn-ghost" onclick="switchPanelById('entries')">📋 View All Entries</button>
+            <button class="btn btn-ghost" onclick="switchPanelById('test')">🧪 Test AI Responses</button>
+            <button class="btn btn-warn" onclick="downloadCurrentDataset()">⬇️ Export Dataset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── UPLOAD PANEL ── -->
+      <div class="panel" id="panel-upload">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Upload JSON Dataset</div>
+              <div class="card-sub">Upload your knowledge base file — it will sync to Firebase instantly</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="upload-zone" id="drop-zone">
+              <input type="file" accept=".json" onchange="handleFileSelect(event)"/>
+              <div class="upload-icon">📂</div>
+              <div class="upload-title">Drop your JSON file here</div>
+              <div class="upload-sub">or click to browse your files</div>
+              <div class="upload-types">
+                <span class="upload-type-badge">.json</span>
+              </div>
+            </div>
+
+            <!-- File preview area -->
+            <div id="file-preview" style="display:none;margin-top:24px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div>
+                  <span style="font-weight:700;" id="file-name-display">filename.json</span>
+                  <span style="font-size:12px;color:var(--textM);margin-left:10px;" id="file-size-display"></span>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="clearFile()">✕ Clear</button>
+              </div>
+
+              <div class="progress-wrap" id="upload-progress-wrap" style="display:none;">
+                <div class="progress-bar" id="upload-progress-bar"></div>
+              </div>
+              <p class="progress-text" id="upload-progress-text"></p>
+
+              <div style="margin-bottom:16px;">
+                <div style="font-size:11px;font-family:var(--mono);letter-spacing:1px;color:var(--textM);text-transform:uppercase;margin-bottom:8px;">Preview (first 40 lines)</div>
+                <div class="json-preview" id="json-preview-box"></div>
+              </div>
+
+              <div style="display:flex;gap:10px;align-items:center;">
+                <button class="btn btn-primary" onclick="uploadToFirebase()" id="btn-upload-firebase">
+                  🔥 Upload to Firebase
+                </button>
+                <button class="btn btn-ghost" onclick="downloadSampleDataset()">⬇️ Download Sample Dataset</button>
+              </div>
+            </div>
+
+            <div style="margin-top:28px;">
+              <div style="font-size:11px;font-family:var(--mono);letter-spacing:1px;color:var(--textM);text-transform:uppercase;margin-bottom:12px;">Expected JSON Structure</div>
+              <div class="json-preview">
+{
+  <span class="json-key">"version"</span>: <span class="json-str">"1.0.0"</span>,
+  <span class="json-key">"entries"</span>: [
+    {
+      <span class="json-key">"id"</span>: <span class="json-str">"greet_001"</span>,
+      <span class="json-key">"category"</span>: <span class="json-str">"greetings"</span>,
+      <span class="json-key">"patterns"</span>: [<span class="json-str">"hello"</span>, <span class="json-str">"hi"</span>, <span class="json-str">"hey"</span>],
+      <span class="json-key">"response"</span>: <span class="json-str">"Hello! How can I help you?"</span>,
+      <span class="json-key">"tags"</span>: [<span class="json-str">"greeting"</span>]
+    }
+  ]
+}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ENTRIES PANEL ── -->
+      <div class="panel" id="panel-entries">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Knowledge Base Entries</div>
+              <div class="card-sub">View, edit and delete individual entries</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Add Entry</button>
+              <button class="btn btn-ghost btn-sm" onclick="refreshData()">↻ Refresh</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="search-bar">
+              <span class="search-icon">🔍</span>
+              <input class="search-input" placeholder="Search entries by pattern, response, category…" oninput="filterEntries(this.value)" />
+              <span class="search-count" id="search-count">0 entries</span>
+            </div>
+            <div id="entries-table-wrap">
+              <div class="empty-state">
+                <div class="empty-icon">📋</div>
+                <div class="empty-text">No entries found. Upload a dataset first.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONFIG PANEL ── -->
+      <div class="panel" id="panel-config">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Firebase Configuration</div>
+              <div class="card-sub">Connect to your Firebase Realtime Database</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="config-note">
+              ℹ️ Get these values from <strong>Firebase Console → Project Settings → Your Apps → Firebase SDK snippet → Config</strong>.<br/>
+              These are saved in your browser's localStorage — never sent anywhere else.
+            </div>
+            <div class="config-grid">
+              <div class="f-group">
+                <label class="f-label">API Key</label>
+                <input class="f-input" id="cfg-apiKey" placeholder="AIzaSyXXXXXXXXXXXXXXXX"/>
+              </div>
+              <div class="f-group">
+                <label class="f-label">Auth Domain</label>
+                <input class="f-input" id="cfg-authDomain" placeholder="your-app.firebaseapp.com"/>
+              </div>
+              <div class="f-group">
+                <label class="f-label">Database URL</label>
+                <input class="f-input" id="cfg-dbURL" placeholder="https://your-app-default-rtdb.firebaseio.com"/>
+              </div>
+              <div class="f-group">
+                <label class="f-label">Project ID</label>
+                <input class="f-input" id="cfg-projectId" placeholder="your-project-id"/>
+              </div>
+              <div class="f-group">
+                <label class="f-label">Storage Bucket</label>
+                <input class="f-input" id="cfg-storageBucket" placeholder="your-app.appspot.com"/>
+              </div>
+              <div class="f-group">
+                <label class="f-label">Messaging Sender ID</label>
+                <input class="f-input" id="cfg-messagingSenderId" placeholder="123456789"/>
+              </div>
+              <div class="f-group">
+                <label class="f-label">App ID</label>
+                <input class="f-input" id="cfg-appId" placeholder="1:123456789:web:xxxxx"/>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:8px;">
+              <button class="btn btn-primary" onclick="saveFirebaseConfig()">💾 Save & Connect</button>
+              <button class="btn btn-ghost" onclick="testConnection()">🔗 Test Connection</button>
+            </div>
+            <div id="cfg-status" style="margin-top:16px;font-size:13px;display:none;padding:12px 16px;border-radius:8px;"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Admin Credentials</div>
+              <div class="card-sub">Used for the admin login above</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="config-note">
+              ℹ️ Set up an admin email/password user in <strong>Firebase Console → Authentication → Users → Add User</strong>. Then sign in above with those credentials.
+            </div>
+            <div style="color:var(--textM);font-size:13px;">
+              Current admin: <strong id="cfg-current-email" style="color:var(--text);">—</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TEST AI PANEL ── -->
+      <div class="panel" id="panel-test">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Test AI Response Engine</div>
+              <div class="card-sub">Uses Fuse.js fuzzy matching — test with typos!</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;gap:10px;margin-bottom:20px;">
+              <input class="f-input" id="test-input" placeholder="Type with typos: 'helo', 'hw r u', 'wht cn u do'…" style="flex:1;"
+                onkeydown="if(event.key==='Enter')runAITest()"/>
+              <button class="btn btn-primary" onclick="runAITest()">Test →</button>
+            </div>
+            <div id="test-result" style="display:none;">
+              <div style="display:grid;gap:12px;">
+                <div style="padding:16px;background:var(--bg2);border-radius:10px;border:1px solid var(--border);">
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--textM);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">User Input</div>
+                  <div id="test-user" style="font-size:14px;"></div>
+                </div>
+                <div style="padding:16px;background:rgba(0,200,150,0.05);border-radius:10px;border:1px solid rgba(0,200,150,0.2);">
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--accent);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">AI Response</div>
+                  <div id="test-ai" style="font-size:14px;line-height:1.7;"></div>
+                </div>
+                <div style="padding:12px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--textM);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Match Debug</div>
+                  <div id="test-debug" style="font-size:12px;font-family:var(--mono);color:var(--textM);line-height:1.8;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ── EDIT/ADD MODAL ── -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add Entry</div>
+    <div class="modal-grid">
+      <div class="f-group">
+        <label class="f-label">ID</label>
+        <input class="f-input" id="m-id" placeholder="greet_001"/>
+      </div>
+      <div class="f-group">
+        <label class="f-label">Category</label>
+        <select class="f-input" id="m-cat">
+          <option value="greetings">greetings</option>
+          <option value="basic_questions">basic_questions</option>
+          <option value="fallback">fallback</option>
+        </select>
+      </div>
+      <div class="f-group">
+        <label class="f-label">Patterns (comma-separated)</label>
+        <input class="f-input" id="m-patterns" placeholder="hello, hi, hey, helo"/>
+      </div>
+      <div class="f-group">
+        <label class="f-label">Response</label>
+        <textarea class="textarea-input" id="m-response" placeholder="Hello! How can I help you?"></textarea>
+      </div>
+      <div class="f-group">
+        <label class="f-label">Tags (comma-separated)</label>
+        <input class="f-input" id="m-tags" placeholder="greeting, hello"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveEntry()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast stack -->
+<div class="toast-stack" id="toast-stack"></div>
+
+<!-- Fuse.js for fuzzy matching -->
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let db = null;
+let auth = null;
+let currentAdmin = null;
+let allEntries = [];
+let filteredEntries = [];
+let editingId = null;
+let selectedFile = null;
+let selectedJSON = null;
+const activityLog = [];
+
+const DB_PATH = 'knowledge_pro/dataset';
+
+// ═══════════════════════════════════════════════════════
+//  FIREBASE INIT
+// ═══════════════════════════════════════════════════════
+function initFirebase() {
+  const cfg = loadFirebaseConfig();
+  if (!cfg) return;
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(cfg);
+    }
+    db   = firebase.database();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentAdmin = user;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('sb-name').textContent = user.email.split('@')[0];
+        document.getElementById('sb-av').textContent   = user.email[0].toUpperCase();
+        document.getElementById('cfg-current-email').textContent = user.email;
+        refreshData();
+      } else {
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('app').style.display = 'none';
+      }
+    });
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    showToast('Firebase config error. Check settings.', 'error');
+  }
+}
+
+function loadFirebaseConfig() {
+  const s = localStorage.getItem('kp_admin_fb_cfg');
+  return s ? JSON.parse(s) : null;
+}
+
+function saveFirebaseConfig() {
+  const cfg = {
+    apiKey:            document.getElementById('cfg-apiKey').value.trim(),
+    authDomain:        document.getElementById('cfg-authDomain').value.trim(),
+    databaseURL:       document.getElementById('cfg-dbURL').value.trim(),
+    projectId:         document.getElementById('cfg-projectId').value.trim(),
+    storageBucket:     document.getElementById('cfg-storageBucket').value.trim(),
+    messagingSenderId: document.getElementById('cfg-messagingSenderId').value.trim(),
+    appId:             document.getElementById('cfg-appId').value.trim(),
+  };
+  if (!cfg.apiKey || !cfg.databaseURL) {
+    showToast('Please fill at least API Key and Database URL', 'error'); return;
+  }
+  localStorage.setItem('kp_admin_fb_cfg', JSON.stringify(cfg));
+  showToast('Firebase config saved! Reloading…', 'success');
+  setTimeout(() => location.reload(), 1200);
+}
+
+function testConnection() {
+  const el = document.getElementById('cfg-status');
+  el.style.display = 'block';
+  if (!db) {
+    el.style.background = 'rgba(255,77,109,0.08)';
+    el.style.color = 'var(--danger)';
+    el.textContent = '✕ Not connected. Save your config first.';
+    return;
+  }
+  db.ref('.info/connected').once('value', snap => {
+    if (snap.val()) {
+      el.style.background = 'rgba(0,200,150,0.08)';
+      el.style.color = 'var(--accent)';
+      el.textContent = '✓ Connected to Firebase Realtime Database!';
+    } else {
+      el.style.background = 'rgba(255,184,0,0.08)';
+      el.style.color = 'var(--warn)';
+      el.textContent = '⚠ Offline or connection issue.';
+    }
+  });
+}
+
+// Pre-fill config if saved
+(function prefillConfig() {
+  const cfg = loadFirebaseConfig();
+  if (!cfg) return;
+  document.getElementById('cfg-apiKey').value            = cfg.apiKey || '';
+  document.getElementById('cfg-authDomain').value        = cfg.authDomain || '';
+  document.getElementById('cfg-dbURL').value             = cfg.databaseURL || '';
+  document.getElementById('cfg-projectId').value         = cfg.projectId || '';
+  document.getElementById('cfg-storageBucket').value     = cfg.storageBucket || '';
+  document.getElementById('cfg-messagingSenderId').value = cfg.messagingSenderId || '';
+  document.getElementById('cfg-appId').value             = cfg.appId || '';
+})();
+
+// ═══════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════
+function adminLogin() {
+  const email = document.getElementById('adm-email').value.trim();
+  const pass  = document.getElementById('adm-pass').value;
+  const err   = document.getElementById('login-err');
+  err.style.display = 'none';
+
+  if (!auth) {
+    err.textContent = '⚠ Firebase not configured. Go to Settings first — or use demo mode below.';
+    err.style.display = 'block';
+    // DEMO MODE: bypass if no firebase
+    demoLogin(email, pass);
+    return;
+  }
+
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(e => { err.textContent = '✕ ' + e.message; err.style.display = 'block'; });
+}
+
+function demoLogin(email, pass) {
+  if (email === 'admin@demo.com' && pass === 'admin123') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('sb-name').textContent = 'Demo Admin';
+    document.getElementById('sb-av').textContent   = 'D';
+    document.getElementById('cfg-current-email').textContent = email;
+    currentAdmin = { email };
+    loadDemoData();
+    showToast('Demo mode active (no Firebase)', 'info');
+  } else {
+    const e = document.getElementById('login-err');
+    e.textContent = '✕ Wrong credentials. Try admin@demo.com / admin123 for demo.';
+    e.style.display = 'block';
+  }
+}
+
+function adminLogout() {
+  if (auth) auth.signOut();
+  else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DATA: FIREBASE READ / WRITE
+// ═══════════════════════════════════════════════════════
+function refreshData() {
+  if (!db) { loadDemoData(); return; }
+  db.ref(DB_PATH).once('value', snap => {
+    const data = snap.val();
+    if (data && data.entries) {
+      allEntries = data.entries;
+    } else {
+      allEntries = [];
+    }
+    filteredEntries = [...allEntries];
+    updateStats();
+    renderEntriesTable(filteredEntries);
+    renderActivity();
+    showToast('Data refreshed from Firebase', 'success');
+  });
+}
+
+function loadDemoData() {
+  // Inline the sample dataset for demo mode
+  const sample = {"version":"1.0.0","entries":[{"id":"greet_001","category":"greetings","patterns":["hello","hi","hey","helo","hii"],"response":"Hello! 👋 Welcome to Knowledge Pro!","tags":["greeting"]},{"id":"greet_002","category":"greetings","patterns":["good morning","morning","gd morning"],"response":"Good morning! ☀️ How can I help you?","tags":["greeting"]},{"id":"greet_003","category":"greetings","patterns":["bye","goodbye","see you","cya"],"response":"Goodbye! 👋 Come back anytime!","tags":["farewell"]},{"id":"basic_001","category":"basic_questions","patterns":["what is your name","who are you","whats your name"],"response":"I'm Knowledge Pro AI! 🤖","tags":["identity"]},{"id":"basic_002","category":"basic_questions","patterns":["what can you do","help me","how can you help"],"response":"I can answer questions from my knowledge base! Just ask.","tags":["features"]},{"id":"basic_003","category":"basic_questions","patterns":["how are you","how r u","how you doing"],"response":"I'm doing great! 😊 Ready to help.","tags":["wellbeing"]},{"id":"fallback_001","category":"fallback","patterns":["idk","not sure","i dont know"],"response":"That's okay! Ask me anything you need help with.","tags":["fallback"]}]};
+  allEntries = sample.entries;
+  filteredEntries = [...allEntries];
+  updateStats();
+  renderEntriesTable(filteredEntries);
+  renderActivity();
+}
+
+async function uploadToFirebase() {
+  if (!selectedJSON) { showToast('No file selected', 'error'); return; }
+
+  const btn = document.getElementById('btn-upload-firebase');
+  btn.disabled = true; btn.textContent = '⏳ Uploading…';
+
+  const progressWrap = document.getElementById('upload-progress-wrap');
+  const progressBar  = document.getElementById('upload-progress-bar');
+  const progressText = document.getElementById('upload-progress-text');
+
+  progressWrap.style.display = 'block';
+  progressText.textContent = 'Preparing data…';
+
+  function setProgress(pct, text) {
+    progressBar.style.width = pct + '%';
+    progressText.textContent = text;
+  }
+
+  try {
+    setProgress(20, 'Validating JSON structure…');
+    await delay(300);
+
+    if (!selectedJSON.entries || !Array.isArray(selectedJSON.entries)) {
+      throw new Error('JSON must have an "entries" array');
+    }
+
+    setProgress(50, 'Uploading to Firebase…');
+
+    if (!db) {
+      // Demo mode — just load it locally
+      await delay(800);
+      allEntries = selectedJSON.entries;
+      filteredEntries = [...allEntries];
+      updateStats();
+      renderEntriesTable(filteredEntries);
+    } else {
+      await db.ref(DB_PATH).set({
+        ...selectedJSON,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: currentAdmin?.email || 'admin'
+      });
+      allEntries = selectedJSON.entries;
+      filteredEntries = [...allEntries];
+    }
+
+    setProgress(80, 'Updating stats…');
+    await delay(200);
+    updateStats();
+    renderEntriesTable(filteredEntries);
+
+    setProgress(100, '✓ Upload complete!');
+    addActivity(`Uploaded dataset with ${selectedJSON.entries.length} entries`);
+    renderActivity();
+    showToast(`✓ ${selectedJSON.entries.length} entries uploaded successfully!`, 'success');
+
+    setTimeout(() => {
+      progressWrap.style.display = 'none';
+      btn.disabled = false; btn.textContent = '🔥 Upload to Firebase';
+    }, 1500);
+
+  } catch(e) {
+    setProgress(0, '✕ Error: ' + e.message);
+    showToast('Upload failed: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '🔥 Upload to Firebase';
+  }
+}
+
+async function saveEntryToFirebase(entry) {
+  if (!db) {
+    // demo — local only
+    const idx = allEntries.findIndex(e => e.id === entry.id);
+    if (idx >= 0) allEntries[idx] = entry; else allEntries.push(entry);
+    filteredEntries = [...allEntries];
+    return;
+  }
+  const snapshot = await db.ref(DB_PATH).once('value');
+  const data = snapshot.val() || { entries: [] };
+  const entries = data.entries || [];
+  const idx = entries.findIndex(e => e.id === entry.id);
+  if (idx >= 0) entries[idx] = entry; else entries.push(entry);
+  await db.ref(DB_PATH).update({ entries });
+  allEntries = entries;
+  filteredEntries = [...allEntries];
+}
+
+async function deleteEntryFromFirebase(id) {
+  if (!db) {
+    allEntries = allEntries.filter(e => e.id !== id);
+    filteredEntries = [...allEntries];
+    return;
+  }
+  const snapshot = await db.ref(DB_PATH).once('value');
+  const data = snapshot.val() || { entries: [] };
+  const entries = (data.entries || []).filter(e => e.id !== id);
+  await db.ref(DB_PATH).update({ entries });
+  allEntries = entries;
+  filteredEntries = [...allEntries];
+}
+
+// ═══════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════
+function updateStats() {
+  document.getElementById('stat-total').textContent    = allEntries.length;
+  document.getElementById('stat-greet').textContent    = allEntries.filter(e => e.category === 'greetings').length;
+  document.getElementById('stat-basic').textContent    = allEntries.filter(e => e.category === 'basic_questions').length;
+  document.getElementById('stat-fallback').textContent = allEntries.filter(e => e.category === 'fallback').length;
+  document.getElementById('search-count').textContent  = allEntries.length + ' entries';
+}
+
+function catBadge(cat) {
+  return `<span class="td-cat cat-${cat}">${cat}</span>`;
+}
+
+function renderEntriesTable(entries) {
+  const wrap = document.getElementById('entries-table-wrap');
+  document.getElementById('search-count').textContent = entries.length + ' entries';
+  if (!entries.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">No entries found.</div></div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th><th>Category</th><th>Patterns</th><th>Response</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${entries.map(e => `
+          <tr>
+            <td class="td-id">${e.id}</td>
+            <td>${catBadge(e.category)}</td>
+            <td class="td-patterns" title="${(e.patterns||[]).join(', ')}">${(e.patterns||[]).join(', ')}</td>
+            <td class="td-response" title="${e.response}">${e.response}</td>
+            <td><div class="td-actions">
+              <button class="btn btn-ghost btn-sm" onclick="openEditModal('${e.id}')">✏️ Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmDelete('${e.id}')">🗑 Del</button>
+            </div></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function filterEntries(q) {
+  if (!q.trim()) {
+    filteredEntries = [...allEntries];
+  } else {
+    const fuse = new Fuse(allEntries, {
+      keys: ['id','category','response','patterns','tags'],
+      threshold: 0.4
+    });
+    filteredEntries = fuse.search(q).map(r => r.item);
+  }
+  renderEntriesTable(filteredEntries);
+}
+
+function addActivity(msg) {
+  activityLog.unshift({ msg, time: new Date().toLocaleTimeString() });
+  if (activityLog.length > 10) activityLog.pop();
+}
+
+function renderActivity() {
+  const el = document.getElementById('activity-log');
+  if (!activityLog.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No activity yet.</div></div>`;
+    return;
+  }
+  el.innerHTML = activityLog.map(a => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:18px;">🕐</span>
+      <span style="flex:1;font-size:13px;">${a.msg}</span>
+      <span style="font-size:11px;color:var(--textM);font-family:var(--mono);">${a.time}</span>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  FILE HANDLING
+// ═══════════════════════════════════════════════════════
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+});
+
+function handleFileSelect(e) {
+  const f = e.target.files[0];
+  if (f) processFile(f);
+}
+
+function processFile(file) {
+  if (!file.name.endsWith('.json')) { showToast('Only JSON files accepted', 'error'); return; }
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const json = JSON.parse(ev.target.result);
+      selectedJSON = json;
+      document.getElementById('file-name-display').textContent = file.name;
+      document.getElementById('file-size-display').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      document.getElementById('file-preview').style.display = 'block';
+      renderJSONPreview(json);
+    } catch(e) {
+      showToast('Invalid JSON file: ' + e.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderJSONPreview(json) {
+  const lines = JSON.stringify(json, null, 2).split('\n').slice(0, 40).join('\n');
+  const colored = lines
+    .replace(/("[\w]+")\s*:/g, '<span class="json-key">$1</span>:')
+    .replace(/:\s*(".*?")/g, ': <span class="json-str">$1</span>')
+    .replace(/:\s*(\d+)/g,   ': <span class="json-num">$1</span>')
+    .replace(/:\s*(true|false)/g, ': <span class="json-bool">$1</span>');
+  document.getElementById('json-preview-box').innerHTML = colored + '\n…';
+}
+
+function clearFile() {
+  selectedFile = null; selectedJSON = null;
+  document.getElementById('file-preview').style.display = 'none';
+}
+
+function downloadSampleDataset() {
+  const sample = {"version":"1.0.0","lastUpdated":"2026-04-04","entries":[{"id":"greet_001","category":"greetings","patterns":["hello","hi","hey","helo","hii"],"response":"Hello! 👋 Welcome! How can I help?","tags":["greeting"]},{"id":"basic_001","category":"basic_questions","patterns":["what is your name","who are you"],"response":"I'm Knowledge Pro AI! 🤖","tags":["identity"]},{"id":"fallback_001","category":"fallback","patterns":["idk","not sure"],"response":"Take your time! Ask me anything. 😊","tags":["fallback"]}]};
+  download('knowledge_pro_sample.json', JSON.stringify(sample, null, 2));
+}
+
+function downloadCurrentDataset() {
+  if (!allEntries.length) { showToast('No data to export', 'error'); return; }
+  const out = { version: '1.0.0', exportedAt: new Date().toISOString(), entries: allEntries };
+  download('knowledge_pro_export.json', JSON.stringify(out, null, 2));
+  showToast('Dataset exported!', 'success');
+}
+
+function download(filename, text) {
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(text);
+  a.download = filename;
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════
+//  ENTRY MODAL
+// ═══════════════════════════════════════════════════════
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add New Entry';
+  document.getElementById('modal-save-btn').textContent = 'Add Entry';
+  document.getElementById('m-id').value = 'entry_' + Date.now();
+  document.getElementById('m-cat').value = 'greetings';
+  document.getElementById('m-patterns').value = '';
+  document.getElementById('m-response').value = '';
+  document.getElementById('m-tags').value = '';
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function openEditModal(id) {
+  const entry = allEntries.find(e => e.id === id);
+  if (!entry) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit Entry';
+  document.getElementById('modal-save-btn').textContent = 'Save Changes';
+  document.getElementById('m-id').value = entry.id;
+  document.getElementById('m-cat').value = entry.category;
+  document.getElementById('m-patterns').value = (entry.patterns||[]).join(', ');
+  document.getElementById('m-response').value = entry.response;
+  document.getElementById('m-tags').value = (entry.tags||[]).join(', ');
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+async function saveEntry() {
+  const entry = {
+    id:       document.getElementById('m-id').value.trim(),
+    category: document.getElementById('m-cat').value,
+    patterns: document.getElementById('m-patterns').value.split(',').map(s=>s.trim()).filter(Boolean),
+    response: document.getElementById('m-response').value.trim(),
+    tags:     document.getElementById('m-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+  };
+  if (!entry.id || !entry.response || !entry.patterns.length) {
+    showToast('ID, patterns and response are required', 'error'); return;
+  }
+  await saveEntryToFirebase(entry);
+  updateStats();
+  renderEntriesTable(filteredEntries);
+  addActivity(`${editingId ? 'Updated' : 'Added'} entry "${entry.id}"`);
+  renderActivity();
+  closeModal();
+  showToast(`Entry ${editingId ? 'updated' : 'added'} successfully!`, 'success');
+}
+
+async function confirmDelete(id) {
+  if (!confirm(`Delete entry "${id}"? This cannot be undone.`)) return;
+  await deleteEntryFromFirebase(id);
+  updateStats();
+  renderEntriesTable(filteredEntries);
+  addActivity(`Deleted entry "${id}"`);
+  renderActivity();
+  showToast(`Entry "${id}" deleted`, 'success');
+}
+
+// ═══════════════════════════════════════════════════════
+//  AI TEST ENGINE (Fuse.js)
+// ═══════════════════════════════════════════════════════
+function runAITest() {
+  const input = document.getElementById('test-input').value.trim();
+  if (!input) { showToast('Enter a test message', 'error'); return; }
+
+  const result = fuseMatch(input, allEntries);
+
+  document.getElementById('test-result').style.display = 'block';
+  document.getElementById('test-user').textContent = input;
+  document.getElementById('test-ai').innerHTML = result.response.replace(/\n/g,'<br>');
+
+  let debugLines = '';
+  if (result.matched) {
+    debugLines = `Matched ID:    ${result.matchedId}\nPattern:       "${result.matchedPattern}"\nCategory:      ${result.category}\nFuse Score:    ${(1 - result.score).toFixed(3)} (higher = better)\nMethod:        ${result.method}`;
+  } else {
+    debugLines = `No match found.\nMethod: ${result.method}\nFallback response used.`;
+  }
+  document.getElementById('test-debug').textContent = debugLines;
+}
+
+// ═══════════════════════════════════════════════════════
+//  FUSE.JS MATCH ENGINE (shared with chat frontend)
+// ═══════════════════════════════════════════════════════
+function fuseMatch(input, entries) {
+  if (!entries || !entries.length) {
+    return { response: "Knowledge base is empty. Please upload a dataset.", matched: false, method: 'empty' };
+  }
+
+  // Build flat searchable list: one row per pattern
+  const flatList = [];
+  entries.forEach(entry => {
+    (entry.patterns || []).forEach(pattern => {
+      flatList.push({ pattern, entry });
+    });
+  });
+
+  const fuse = new Fuse(flatList, {
+    keys: ['pattern'],
+    threshold: 0.45,
+    includeScore: true,
+    minMatchCharLength: 2,
+    ignoreLocation: true,
+  });
+
+  const results = fuse.search(input);
+
+  if (results.length > 0) {
+    const best = results[0];
+    return {
+      response: best.item.entry.response,
+      matched: true,
+      matchedId: best.item.entry.id,
+      matchedPattern: best.item.pattern,
+      category: best.item.entry.category,
+      score: best.score,
+      method: 'fuse_fuzzy'
+    };
+  }
+
+  // Exact substring fallback
+  const lower = input.toLowerCase();
+  for (const { pattern, entry } of flatList) {
+    if (lower.includes(pattern) || pattern.includes(lower)) {
+      return { response: entry.response, matched: true, matchedId: entry.id, matchedPattern: pattern, category: entry.category, score: 0, method: 'substring' };
+    }
+  }
+
+  return {
+    response: "I'm not sure I understand that. Could you rephrase? I'm still learning! 🤔",
+    matched: false,
+    method: 'no_match'
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════
+const panelTitles = { dashboard:'Dashboard', upload:'Upload Dataset', entries:'Manage Entries', config:'Firebase Configuration', test:'Test AI Engine' };
+
+function switchPanel(el) {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  const name = el.dataset.panel;
+  switchPanelById(name);
+}
+
+function switchPanelById(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('topbar-title').textContent = panelTitles[name] || name;
+  document.querySelectorAll('.sb-item').forEach(i => {
+    if (i.dataset.panel === name) i.classList.add('active'); else i.classList.remove('active');
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+function showToast(msg, type = 'info') {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' };
+  const stack = document.getElementById('toast-stack');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  stack.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(40px)'; t.style.transition='all .3s'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTIL
+// ═══════════════════════════════════════════════════════
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── BOOT ──
+initFirebase();
+// If no firebase config, show demo login hint after 500ms
+setTimeout(() => {
+  if (!db) {
+    const e = document.getElementById('login-err');
+    e.style.display = 'block';
+    e.textContent = '💡 No Firebase config yet. Demo: admin@demo.com / admin123';
+  }
+}, 500);
+</script>
+</body>
+</html>
