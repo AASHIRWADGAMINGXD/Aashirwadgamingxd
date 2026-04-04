@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Knowledge Pro — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0d0f14;--surface:#13151d;--surface2:#1a1d28;--surface3:#202432;
+  --accent:#e8650a;--accent2:#ff8c3a;--green:#22c55e;--red:#ef4444;--blue:#3b82f6;
+  --text:#e8e4dc;--muted:#64748b;--border:rgba(255,255,255,0.08);
+  --r:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:64px;background:var(--surface);border-bottom:1px solid var(--border);}
+.hb{display:flex;align-items:center;gap:12px;}
+.badge{width:38px;height:38px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;color:#fff;}
+.hname{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;}
+.htag{font-size:9px;color:var(--accent);font-family:'DM Mono',monospace;letter-spacing:2px;margin-top:1px;}
+.hr{display:flex;align-items:center;gap:12px;}
+.pill{padding:6px 16px;border-radius:50px;font-size:12px;font-family:'DM Mono',monospace;border:1px solid var(--border);color:var(--muted);}
+.pill.ok{color:var(--green);border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.08);}
+.pill.err{color:var(--red);border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.08);}
+.back-btn{padding:7px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;transition:all .2s;font-family:'Nunito',sans-serif;}
+.back-btn:hover{border-color:var(--accent);color:var(--accent);}
+.main{display:flex;gap:0;height:calc(100vh - 64px);}
+
+/* ── LEFT PANEL ── */
+.left{width:380px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+.panel{padding:24px;}
+.panel+.panel{border-top:1px solid var(--border);}
+.panel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;margin-bottom:16px;color:var(--text);display:flex;align-items:center;gap:8px;}
+.pt-icon{font-size:16px;}
+
+/* Stats row */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0;}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;}
+.stat-n{font-size:26px;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);}
+.stat-l{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:1px;margin-top:2px;}
+
+/* Upload zone */
+.dropzone{
+  border:2px dashed rgba(232,101,10,.3);
+  border-radius:var(--r);padding:32px 20px;
+  text-align:center;cursor:pointer;
+  transition:all .3s;background:rgba(232,101,10,.04);
+  position:relative;
+}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);background:rgba(232,101,10,.1);}
+.dz-icon{font-size:32px;margin-bottom:10px;}
+.dz-title{font-size:14px;font-weight:600;margin-bottom:4px;}
+.dz-sub{font-size:12px;color:var(--muted);}
+.dz-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+
+/* Buttons */
+.btn{padding:10px 20px;border-radius:10px;border:none;font-size:13px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:7px;}
+.btn-primary{background:var(--accent);color:#fff;width:100%;}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);}
+.btn-danger:hover{background:var(--red);color:#fff;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--text);color:var(--text);}
+.btn-green{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);}
+.btn-green:hover{background:var(--green);color:#fff;}
+
+/* JSON preview */
+.json-preview{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px;
+  font-family:'DM Mono',monospace;font-size:11px;
+  color:#94a3b8;max-height:200px;overflow-y:auto;
+  white-space:pre-wrap;word-break:break-all;
+  display:none;
+}
+.json-preview.show{display:block;}
+
+/* Add entry form */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.field input,.field textarea,.field select{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;padding:10px 14px;
+  color:var(--text);font-size:13px;font-family:'Nunito',sans-serif;
+  outline:none;transition:border-color .2s;
+}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);}
+.field textarea{resize:vertical;min-height:80px;}
+.field input::placeholder,.field textarea::placeholder{color:var(--muted);}
+
+/* ── RIGHT PANEL ── */
+.right{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.right-top{padding:20px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.right-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+.actions{display:flex;gap:8px;}
+
+/* Search */
+.search-bar{padding:14px 28px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.search-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;color:var(--text);font-size:13px;font-family:'Nunito',sans-serif;outline:none;transition:border-color .2s;}
+.search-input:focus{border-color:var(--accent);}
+.search-input::placeholder{color:var(--muted);}
+
+/* Entries list */
+.entries-list{flex:1;overflow-y:auto;padding:20px 28px;display:flex;flex-direction:column;gap:12px;}
+.entries-list::-webkit-scrollbar{width:3px;}
+.entries-list::-webkit-scrollbar-thumb{background:var(--border);}
+
+.entry-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:18px 20px;
+  transition:border-color .2s;
+  animation:fadeIn .3s ease;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.entry-card:hover{border-color:rgba(232,101,10,.3);}
+.entry-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.entry-cat{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:50px;background:rgba(232,101,10,.15);color:var(--accent);border:1px solid rgba(232,101,10,.2);}
+.entry-actions{display:flex;gap:6px;}
+.ea-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.ea-btn:hover{background:var(--surface2);color:var(--text);}
+.ea-btn.del:hover{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:var(--red);}
+.entry-answer{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:10px;}
+.entry-questions{display:flex;flex-wrap:wrap;gap:6px;}
+.eq{padding:3px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:50px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.entry-id{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:8px;}
+
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-title{font-size:16px;font-weight:600;margin-bottom:6px;}
+.empty-sub{font-size:13px;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:modalIn .3s ease;}
+@keyframes modalIn{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:24px;}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}
+
+/* Progress bar */
+.progress{height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:12px 0;display:none;}
+.progress.show{display:block;}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .3s ease;width:0%;}
+
+/* Log */
+.log{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-family:'DM Mono',monospace;font-size:11px;max-height:120px;overflow-y:auto;color:#94a3b8;display:none;}
+.log.show{display:block;}
+.log-line{margin-bottom:3px;}
+.log-line.ok{color:var(--green);}
+.log-line.err{color:var(--red);}
+.log-line.info{color:var(--blue);}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:999;transform:translateY(60px);opacity:0;transition:all .4s cubic-bezier(.16,1,.3,1);display:flex;align-items:center;gap:8px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.ok{border-color:rgba(34,197,94,.4);}.toast.err{border-color:rgba(239,68,68,.4);}
+
+/* Tab filter */
+.cat-filters{display:flex;gap:8px;flex-wrap:wrap;padding:0 28px 14px;}
+.cf{padding:5px 14px;border-radius:50px;font-size:12px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;font-family:'Nunito',sans-serif;}
+.cf.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="hb">
+    <div class="badge">⚙️</div>
+    <div><div class="hname">Knowledge Pro</div><div class="htag">ADMIN PANEL</div></div>
+  </div>
+  <div class="hr">
+    <div class="pill" id="fb-status">Connecting…</div>
+    <button class="back-btn" onclick="window.open('knowledge-pro-chat.html','_blank')">← Open Chat</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="left">
+
+    <!-- Stats -->
+    <div class="panel">
+      <div class="panel-title"><span class="pt-icon">📊</span> Statistics</div>
+      <div class="stats">
+        <div class="stat-card"><div class="stat-n" id="s-total">0</div><div class="stat-l">TOTAL ENTRIES</div></div>
+        <div class="stat-card"><div class="stat-n" id="s-cats">0</div><div class="stat-l">CATEGORIES</div></div>
+        <div class="stat-card"><div class="stat-n" id="s-qs">0</div><div class="stat-l">QUESTIONS</div></div>
+        <div class="stat-card"><div class="stat-n" id="s-docs">0</div><div class="stat-l">FIRESTORE DOCS</div></div>
+      </div>
+    </div>
+
+    <!-- Upload JSON -->
+    <div class="panel">
+      <div class="panel-title"><span class="pt-icon">📤</span> Upload JSON Dataset</div>
+      <div class="dropzone" id="dz" ondrop="onDrop(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)">
+        <input type="file" class="dz-input" accept=".json" onchange="onFile(this)" id="file-input"/>
+        <div class="dz-icon">📂</div>
+        <div class="dz-title">Drop JSON file here</div>
+        <div class="dz-sub">or click to browse · dataset.json</div>
+      </div>
+      <div class="json-preview" id="json-preview"></div>
+      <div class="progress" id="upload-progress"><div class="progress-bar" id="upload-bar"></div></div>
+      <div class="log" id="upload-log"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="btn btn-primary" id="upload-btn" onclick="uploadToFirebase()" disabled>⬆ Upload to Firebase</button>
+        <button class="btn btn-ghost" onclick="downloadSample()">⬇ Sample JSON</button>
+      </div>
+    </div>
+
+    <!-- Add Single Entry -->
+    <div class="panel">
+      <div class="panel-title"><span class="pt-icon">➕</span> Add Single Entry</div>
+      <div class="field">
+        <label>Category</label>
+        <input id="f-cat" type="text" placeholder="e.g. Greetings, Support, FAQ"/>
+      </div>
+      <div class="field">
+        <label>Questions (comma separated)</label>
+        <textarea id="f-qs" placeholder="hello, hi, hey, helo, ello"></textarea>
+      </div>
+      <div class="field">
+        <label>Tags (comma separated)</label>
+        <input id="f-tags" type="text" placeholder="greet, welcome, salute"/>
+      </div>
+      <div class="field">
+        <label>Answer</label>
+        <textarea id="f-ans" placeholder="The AI will respond with this text…"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="addEntry()">➕ Add to Firebase</button>
+    </div>
+
+  </div>
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="right">
+    <div class="right-top">
+      <div class="right-title">📚 Knowledge Base Entries</div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="loadEntries()">🔄 Refresh</button>
+        <button class="btn btn-danger" onclick="showClearModal()">🗑 Clear All</button>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <input class="search-input" id="search" placeholder="🔍  Search entries by question, answer, category…" oninput="filterEntries()"/>
+    </div>
+
+    <div class="cat-filters" id="cat-filters">
+      <button class="cf active" onclick="filterCat(this,'all')">All</button>
+    </div>
+
+    <div class="entries-list" id="entries-list">
+      <div class="empty">
+        <div class="empty-icon">⏳</div>
+        <div class="empty-title">Loading knowledge base…</div>
+        <div class="empty-sub">Connecting to Firebase Firestore</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Entry</div>
+    <input type="hidden" id="edit-id"/>
+    <div class="field"><label>Category</label><input id="edit-cat" type="text"/></div>
+    <div class="field"><label>Questions (comma separated)</label><textarea id="edit-qs"></textarea></div>
+    <div class="field"><label>Tags (comma separated)</label><input id="edit-tags" type="text"/></div>
+    <div class="field"><label>Answer</label><textarea id="edit-ans"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Save Changes</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAR CONFIRM MODAL -->
+<div class="modal-overlay" id="clear-modal">
+  <div class="modal" style="max-width:400px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+    <div class="modal-title" style="text-align:center;">Clear All Entries?</div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">This will permanently delete ALL knowledge base entries from Firebase. This cannot be undone.</p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn btn-danger" onclick="clearAll()">Yes, Delete All</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('clear-modal').classList.remove('show')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, doc, deleteDoc, updateDoc, writeBatch, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const cfg = {
+  apiKey:"AIzaSyDczwhvoNMBNW61y5G6fulxd-f1HDNOvOw",
+  authDomain:"knowledge-pro-ai-80306.firebaseapp.com",
+  projectId:"knowledge-pro-ai-80306",
+  storageBucket:"knowledge-pro-ai-80306.firebasestorage.app",
+  messagingSenderId:"433818200322",
+  appId:"1:433818200322:web:303adb742b01453d02ba1b",
+  measurementId:"G-EGKNPD5KQ8"
+};
+const fbApp = initializeApp(cfg);
+const db    = getFirestore(fbApp);
+const COL   = "knowledge";
+
+let allEntries=[], pendingJSON=null, filterCategory='all';
+
+// ════════════════════════════════
+//  INIT
+// ════════════════════════════════
+async function init(){
+  setFBStatus("Connecting…","");
+  try{
+    await loadEntries();
+    // Live listener
+    onSnapshot(collection(db,COL),snap=>{
+      buildEntries(snap); updateStats(); renderEntries();
+    });
+    setFBStatus("Connected ✓","ok");
+    toast("✅ Connected to Firebase","ok");
+  }catch(e){
+    setFBStatus("Error ✗","err");
+    toast("⚠️ "+e.message,"err");
+    console.error(e);
+  }
+}
+
+window.loadEntries=async function(){
+  try{
+    const snap=await getDocs(collection(db,COL));
+    buildEntries(snap); updateStats(); renderEntries();
+  }catch(e){ toast("Error loading: "+e.message,"err"); }
+};
+
+function buildEntries(snap){
+  allEntries=[];
+  snap.forEach(d=>{
+    const data=d.data();
+    allEntries.push({id:d.id,...data});
+  });
+  buildCatFilters();
+}
+
+// ════════════════════════════════
+//  RENDER
+// ════════════════════════════════
+function renderEntries(){
+  const list=document.getElementById('entries-list');
+  const q=document.getElementById('search').value.toLowerCase();
+  let filtered=allEntries.filter(e=>{
+    const catMatch=filterCategory==='all'||e.category===filterCategory;
+    const qMatch=!q||
+      (e.answer||'').toLowerCase().includes(q)||
+      (e.category||'').toLowerCase().includes(q)||
+      (e.questions||[]).some(x=>x.toLowerCase().includes(q));
+    return catMatch&&qMatch;
+  });
+
+  if(!filtered.length){
+    list.innerHTML=`<div class="empty"><div class="empty-icon">${allEntries.length?'🔍':'📭'}</div><div class="empty-title">${allEntries.length?'No results found':'Knowledge base is empty'}</div><div class="empty-sub">${allEntries.length?'Try a different search or category filter':'Upload a JSON dataset or add entries manually'}</div></div>`;
+    return;
+  }
+  list.innerHTML=filtered.map(e=>`
+    <div class="entry-card" id="card-${e.id}">
+      <div class="entry-header">
+        <span class="entry-cat">${e.category||'General'}</span>
+        <div class="entry-actions">
+          <button class="ea-btn" onclick="openEdit('${e.id}')" title="Edit">✏️</button>
+          <button class="ea-btn del" onclick="deleteEntry('${e.id}')" title="Delete">🗑</button>
+        </div>
+      </div>
+      <div class="entry-answer">${(e.answer||'').replace(/\n/g,'<br>')}</div>
+      <div class="entry-questions">${(e.questions||[]).map(q=>`<span class="eq">${q}</span>`).join('')}</div>
+      ${e.tags&&e.tags.length?`<div class="entry-questions" style="margin-top:6px">${e.tags.map(t=>`<span class="eq" style="color:var(--blue);border-color:rgba(59,130,246,.3)">#${t}</span>`).join('')}</div>`:''}
+      <div class="entry-id">ID: ${e.id}</div>
+    </div>`).join('');
+}
+
+window.filterEntries=function(){ renderEntries(); };
+
+function buildCatFilters(){
+  const cats=[...new Set(allEntries.map(e=>e.category||'General'))].sort();
+  const fc=document.getElementById('cat-filters');
+  fc.innerHTML=`<button class="cf ${filterCategory==='all'?'active':''}" onclick="filterCat(this,'all')">All</button>`
+    +cats.map(c=>`<button class="cf ${filterCategory===c?'active':''}" onclick="filterCat(this,'${c}')">${c}</button>`).join('');
+}
+window.filterCat=function(el,cat){
+  filterCategory=cat;
+  document.querySelectorAll('.cf').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderEntries();
+};
+
+function updateStats(){
+  const total=allEntries.length;
+  const cats=new Set(allEntries.map(e=>e.category||'General')).size;
+  const qs=allEntries.reduce((a,e)=>a+(e.questions||[]).length,0);
+  document.getElementById('s-total').textContent=total;
+  document.getElementById('s-cats').textContent=cats;
+  document.getElementById('s-qs').textContent=qs;
+  document.getElementById('s-docs').textContent=total;
+}
+
+// ════════════════════════════════
+//  ADD SINGLE ENTRY
+// ════════════════════════════════
+window.addEntry=async function(){
+  const cat=document.getElementById('f-cat').value.trim();
+  const qs=document.getElementById('f-qs').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const tags=document.getElementById('f-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const ans=document.getElementById('f-ans').value.trim();
+  if(!cat||!qs.length||!ans){ toast("⚠️ Fill category, questions & answer","err"); return; }
+  try{
+    await addDoc(collection(db,COL),{category:cat,questions:qs,tags,answer:ans,createdAt:Date.now()});
+    document.getElementById('f-cat').value='';
+    document.getElementById('f-qs').value='';
+    document.getElementById('f-tags').value='';
+    document.getElementById('f-ans').value='';
+    toast("✅ Entry added to Firebase","ok");
+  }catch(e){ toast("Error: "+e.message,"err"); }
+};
+
+// ════════════════════════════════
+//  DELETE
+// ════════════════════════════════
+window.deleteEntry=async function(id){
+  if(!confirm('Delete this entry?'))return;
+  try{
+    await deleteDoc(doc(db,COL,id));
+    toast("🗑 Entry deleted","ok");
+  }catch(e){ toast("Error: "+e.message,"err"); }
+};
+
+// ════════════════════════════════
+//  EDIT
+// ════════════════════════════════
+window.openEdit=function(id){
+  const e=allEntries.find(x=>x.id===id);
+  if(!e)return;
+  document.getElementById('edit-id').value=id;
+  document.getElementById('edit-cat').value=e.category||'';
+  document.getElementById('edit-qs').value=(e.questions||[]).join(', ');
+  document.getElementById('edit-tags').value=(e.tags||[]).join(', ');
+  document.getElementById('edit-ans').value=e.answer||'';
+  document.getElementById('edit-modal').classList.add('show');
+};
+window.closeModal=function(){ document.getElementById('edit-modal').classList.remove('show'); };
+window.saveEdit=async function(){
+  const id=document.getElementById('edit-id').value;
+  const cat=document.getElementById('edit-cat').value.trim();
+  const qs=document.getElementById('edit-qs').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const tags=document.getElementById('edit-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const ans=document.getElementById('edit-ans').value.trim();
+  if(!cat||!qs.length||!ans){ toast("Fill all fields","err"); return; }
+  try{
+    await updateDoc(doc(db,COL,id),{category:cat,questions:qs,tags,answer:ans,updatedAt:Date.now()});
+    closeModal();
+    toast("✅ Entry updated","ok");
+  }catch(e){ toast("Error: "+e.message,"err"); }
+};
+
+// ════════════════════════════════
+//  CLEAR ALL
+// ════════════════════════════════
+window.showClearModal=function(){ document.getElementById('clear-modal').classList.add('show'); };
+window.clearAll=async function(){
+  document.getElementById('clear-modal').classList.remove('show');
+  try{
+    const snap=await getDocs(collection(db,COL));
+    const batch=writeBatch(db);
+    snap.forEach(d=>batch.delete(doc(db,COL,d.id)));
+    await batch.commit();
+    toast("🗑 All entries deleted","ok");
+  }catch(e){ toast("Error: "+e.message,"err"); }
+};
+
+// ════════════════════════════════
+//  JSON FILE UPLOAD
+// ════════════════════════════════
+window.onFile=function(input){
+  const file=input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      pendingJSON=JSON.parse(e.target.result);
+      document.getElementById('json-preview').textContent=JSON.stringify(pendingJSON,null,2);
+      document.getElementById('json-preview').classList.add('show');
+      document.getElementById('upload-btn').disabled=false;
+      toast(`📂 Loaded: ${pendingJSON.length||Object.keys(pendingJSON).length} entries detected`,"ok");
+    }catch(err){ toast("⚠️ Invalid JSON file","err"); pendingJSON=null; }
+  };
+  reader.readAsText(file);
+};
+
+window.onDrop=function(e){
+  e.preventDefault();
+  document.getElementById('dz').classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(file){
+    const inp=document.getElementById('file-input');
+    const dt=new DataTransfer();dt.items.add(file);
+    inp.files=dt.files;window.onFile(inp);
+  }
+};
+window.onDragOver=function(e){e.preventDefault();document.getElementById('dz').classList.add('drag');};
+window.onDragLeave=function(){document.getElementById('dz').classList.remove('drag');};
+
+window.uploadToFirebase=async function(){
+  if(!pendingJSON){ toast("No JSON loaded","err"); return; }
+  const items=Array.isArray(pendingJSON)?pendingJSON:Object.values(pendingJSON);
+  const btn=document.getElementById('upload-btn');
+  btn.disabled=true;btn.textContent='Uploading…';
+  const prog=document.getElementById('upload-progress');
+  const bar=document.getElementById('upload-bar');
+  const log=document.getElementById('upload-log');
+  prog.classList.add('show');log.classList.add('show');log.innerHTML='';
+
+  let ok=0,fail=0;
+  for(let i=0;i<items.length;i++){
+    const item=items[i];
+    const pct=Math.round(((i+1)/items.length)*100);
+    bar.style.width=pct+'%';
+    try{
+      // Support both { questions, answer, category } and { q, a, category } formats
+      const entry={
+        category: item.category||item.cat||'General',
+        questions: item.questions||item.q||(item.question?[item.question]:[]),
+        answer:    item.answer||item.a||item.response||'',
+        tags:      item.tags||[],
+        createdAt: Date.now()
+      };
+      if(!entry.questions.length||!entry.answer){ fail++; addLog(log,`⚠ Skipped item ${i+1}: missing questions/answer`,'err'); continue; }
+      await addDoc(collection(db,COL),entry);
+      ok++;
+      addLog(log,`✓ [${i+1}/${items.length}] "${entry.questions[0]}" → ${entry.category}`,'ok');
+    }catch(e){
+      fail++;addLog(log,`✗ Error on item ${i+1}: ${e.message}`,'err');
+    }
+  }
+  btn.disabled=false;btn.textContent='⬆ Upload to Firebase';
+  toast(`✅ Done: ${ok} uploaded, ${fail} skipped`,'ok');
+  addLog(log,`\n🎉 Upload complete: ${ok} success, ${fail} failed`,'info');
+  pendingJSON=null;
+  document.getElementById('json-preview').classList.remove('show');
+  document.getElementById('json-preview').textContent='';
+  document.getElementById('file-input').value='';
+};
+
+function addLog(logEl,msg,type){
+  const d=document.createElement('div');
+  d.className=`log-line ${type}`;d.textContent=msg;
+  logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;
+}
+
+// ════════════════════════════════
+//  DOWNLOAD SAMPLE JSON
+// ════════════════════════════════
+window.downloadSample=function(){
+  const sample=[
+    {"category":"Greetings","questions":["hello","hi","hey","helo","hii","helloo","ello","yo"],"tags":["greet","welcome"],"answer":"👋 Hello! Welcome to Knowledge Pro. How can I help you today?"},
+    {"category":"Greetings","questions":["good morning","gd morning","mornin","good mornin"],"tags":["morning","greet"],"answer":"🌅 Good morning! Hope you have a wonderful day. How can I assist you?"},
+    {"category":"Greetings","questions":["good night","gd night","goodnight","nite"],"tags":["night","farewell"],"answer":"🌙 Good night! Sleep well. I'll be here whenever you need me."},
+    {"category":"Greetings","questions":["good afternoon","good aftnoon","afternoon"],"tags":["afternoon","greet"],"answer":"☀️ Good afternoon! How can I help you today?"},
+    {"category":"Greetings","questions":["how are you","how r u","how are u","hows it going","howdy","how u doing"],"tags":["wellbeing","greet"],"answer":"I'm doing great, thanks for asking! Ready to help you with anything. 😊"},
+    {"category":"Greetings","questions":["bye","goodbye","see you","cya","ttyl","take care","see ya"],"tags":["farewell"],"answer":"👋 Goodbye! Come back anytime. Have a great day!"},
+    {"category":"Greetings","questions":["thank you","thanks","thx","ty","thankyou","thnx","tysm"],"tags":["thanks","gratitude"],"answer":"You're very welcome! 😊 Is there anything else I can help you with?"},
+    {"category":"About","questions":["what is your name","who are you","what are you","your name","tell me about yourself"],"tags":["identity","about"],"answer":"I'm Knowledge Pro — your AI assistant powered by Firebase and Fuse.js fuzzy matching! I'm trained on a custom knowledge base and can understand even typo-filled messages."},
+    {"category":"About","questions":["what can you do","help me","how can you help","your features","capabilities"],"tags":["features","help","capabilities"],"answer":"I can:\n• Answer questions from my knowledge base\n• Understand typos using fuzzy matching\n• Learn new topics when the admin updates the database\n• Browse knowledge by category\n\nJust ask me anything!"},
+    {"category":"About","questions":["how do you work","how does this work","explain yourself"],"tags":["technical","about"],"answer":"I use Fuse.js fuzzy matching to compare your question against all the questions in my Firebase knowledge base. Even with typos, I find the closest match and return the right answer!"},
+    {"category":"Fun","questions":["tell me a joke","joke","make me laugh","something funny","be funny"],"tags":["joke","humor","fun"],"answer":"Why don't scientists trust atoms?\nBecause they make up everything! 😄"},
+    {"category":"Fun","questions":["what is the meaning of life","42","meaning of life"],"tags":["philosophy","fun"],"answer":"According to The Hitchhiker's Guide to the Galaxy — 42! 🤖 But in reality, you get to define it yourself."},
+    {"category":"Support","questions":["i have a problem","help me","something is wrong","issue","not working"],"tags":["support","help","issue"],"answer":"I'm sorry to hear that! Please describe your issue in detail and I'll do my best to help, or connect you with the right support team."},
+    {"category":"Support","questions":["how to contact support","contact","email support","reach out"],"tags":["contact","support"],"answer":"You can reach our support team at support@knowledgepro.com or use the Help section in the admin panel."},
+    {"category":"FAQ","questions":["what is knowledge pro","about knowledge pro","explain knowledge pro"],"tags":["faq","about"],"answer":"Knowledge Pro is an AI-powered knowledge assistant platform. Admins can upload JSON datasets to Firebase, and the AI uses fuzzy search to answer user questions accurately — even with typos!"}
+  ];
+  const blob=new Blob([JSON.stringify(sample,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='knowledge-pro-dataset.json';a.click();
+  toast("📥 Sample JSON downloaded","ok");
+};
+
+// ════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════
+function setFBStatus(txt,cls){
+  const el=document.getElementById('fb-status');
+  el.textContent=txt;el.className='pill '+cls;
+}
+
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+(type==='ok'?'ok':type==='err'?'err':'');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ── BOOT ──
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Knowledge Pro — AI Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --ink:#0d0f14;--paper:#f5f2eb;--cream:#ede9df;--warm:#e8e2d5;
+  --accent:#c8440a;--accent2:#e8650a;--teal:#0a6c74;--teal2:#0d8a94;
+  --muted:#7a7268;--border:#d4cfc6;--surface:#faf8f4;
+  --shadow:rgba(13,15,20,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--paper);color:var(--ink);font-family:'Nunito',sans-serif;display:flex;flex-direction:column;height:100vh;}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:62px;background:var(--ink);border-bottom:3px solid var(--accent);flex-shrink:0;}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-badge{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:#fff;}
+.brand-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;}
+.brand-tag{font-size:9px;color:var(--accent2);font-family:'DM Mono',monospace;letter-spacing:2px;margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.status-pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:50px;padding:5px 14px;font-size:11px;color:rgba(255,255,255,0.6);font-family:'DM Mono',monospace;}
+.s-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;animation:blink 2s ease infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
+.db-label{font-size:11px;color:rgba(255,255,255,0.35);font-family:'DM Mono',monospace;}
+#db-ind{color:#f59e0b;}#db-ind.ok{color:#22c55e;}
+.layout{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:240px;flex-shrink:0;background:var(--ink);display:flex;flex-direction:column;padding:16px 0;border-right:1px solid rgba(255,255,255,0.06);}
+.sl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.22);padding:0 18px;margin:14px 0 6px;}
+.sb{padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,0.5);cursor:pointer;transition:all .2s;border-left:3px solid transparent;}
+.sb:hover{color:#fff;background:rgba(255,255,255,0.05);}
+.sb.active{color:#fff;background:rgba(200,68,10,0.18);border-left-color:var(--accent);}
+.sb-icon{font-size:15px;width:20px;text-align:center;}
+.sdiv{height:1px;background:rgba(255,255,255,0.06);margin:6px 0;}
+.s-stats{margin-top:auto;padding:14px 18px;border-top:1px solid rgba(255,255,255,0.06);}
+.sr{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;}
+.sk{color:rgba(255,255,255,0.3);font-family:'DM Mono',monospace;}
+.sv{color:rgba(255,255,255,0.7);font-weight:700;}
+.chat-main{flex:1;display:flex;flex-direction:column;background:var(--surface);overflow:hidden;}
+.topbar{padding:12px 26px;background:var(--paper);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.ta{display:flex;gap:8px;}
+.ib{width:32px;height:32px;border-radius:8px;background:var(--cream);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;transition:all .2s;color:var(--muted);}
+.ib:hover{background:var(--warm);color:var(--ink);}
+.messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth;}
+.messages::-webkit-scrollbar{width:3px;}
+.messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.wc{background:var(--paper);border:1.5px solid var(--border);border-radius:20px;padding:32px;max-width:540px;margin:16px auto;text-align:center;box-shadow:0 2px 20px var(--shadow);}
+.wc-icon{font-size:42px;margin-bottom:14px;}
+.wc-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:9px;}
+.wc-sub{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:22px;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.chip{padding:7px 15px;background:var(--cream);border:1px solid var(--border);border-radius:50px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .2s;}
+.chip:hover{background:var(--accent);border-color:var(--accent);color:#fff;}
+.mr{display:flex;gap:10px;animation:fu .3s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.mr.user{flex-direction:row-reverse;}
+.av{width:33px;height:33px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.mr.ai .av{background:var(--ink);color:var(--accent2);font-family:'DM Mono',monospace;font-size:10px;}
+.mr.user .av{background:var(--accent);color:#fff;font-size:13px;}
+.mb{max-width:70%;}
+.bub{padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.65;}
+.mr.user .bub{background:var(--ink);color:#fff;border-bottom-right-radius:4px;}
+.mr.ai .bub{background:var(--paper);color:var(--ink);border:1.5px solid var(--border);border-bottom-left-radius:4px;}
+.bub.nm{background:rgba(200,68,10,0.07);border:1.5px solid rgba(200,68,10,0.2);color:var(--accent);}
+.mm{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:4px;}
+.mr.user .mm{text-align:right;}
+.mbadge{display:inline-flex;align-items:center;gap:4px;background:rgba(10,108,116,0.1);border:1px solid rgba(10,108,116,0.2);border-radius:50px;padding:2px 9px;font-size:10px;color:var(--teal);font-family:'DM Mono',monospace;margin-bottom:5px;}
+.typing-bub{display:flex;align-items:center;gap:5px;padding:13px 17px;background:var(--paper);border:1.5px solid var(--border);border-radius:18px;border-bottom-left-radius:4px;width:fit-content;}
+.td{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bn .9s ease infinite;}
+.td:nth-child(2){animation-delay:.15s;}.td:nth-child(3){animation-delay:.3s;}
+@keyframes bn{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-5px);}}
+.ia{padding:14px 26px 20px;background:var(--paper);border-top:1px solid var(--border);flex-shrink:0;}
+.iw{display:flex;align-items:flex-end;gap:10px;background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:11px 14px;transition:border-color .3s,box-shadow .3s;}
+.iw:focus-within{border-color:var(--teal2);box-shadow:0 0 0 3px rgba(10,108,116,.1);}
+textarea{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font-size:14px;font-family:'Nunito',sans-serif;resize:none;max-height:100px;min-height:22px;line-height:1.6;}
+textarea::placeholder{color:var(--muted);}
+.sb2{width:38px;height:38px;background:var(--ink);border:none;border-radius:10px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.sb2:hover{background:var(--accent);transform:scale(1.05);}
+.sb2:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.ih{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-align:center;margin-top:8px;}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--ink);color:#fff;border-radius:10px;padding:11px 18px;font-size:12px;box-shadow:0 8px 32px rgba(0,0,0,.25);z-index:999;transform:translateY(60px);opacity:0;transition:all .4s cubic-bezier(.16,1,.3,1);display:flex;align-items:center;gap:8px;}
+.toast.show{transform:translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-badge">KP</div>
+    <div><div class="brand-name">Knowledge Pro</div><div class="brand-tag">AI ASSISTANT</div></div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill"><span class="s-dot"></span>Online</div>
+    <div class="db-label">DB: <span id="db-ind">Loading…</span></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sl">Navigation</div>
+    <div class="sb active" onclick="setActive(this)"><span class="sb-icon">💬</span>Chat</div>
+    <div class="sb" onclick="setActive(this);clearChat()"><span class="sb-icon">✨</span>New Chat</div>
+    <div class="sdiv"></div>
+    <div class="sl">Knowledge</div>
+    <div class="sb" onclick="setActive(this);showTopics()"><span class="sb-icon">📚</span>Browse Topics</div>
+    <div class="sdiv"></div>
+    <div class="sb" onclick="openAdmin()"><span class="sb-icon">⚙️</span>Admin Panel</div>
+    <div class="s-stats">
+      <div class="sr"><span class="sk">ENTRIES</span><span class="sv" id="stat-e">—</span></div>
+      <div class="sr"><span class="sk">CATEGORIES</span><span class="sv" id="stat-c">—</span></div>
+      <div class="sr"><span class="sk">ENGINE</span><span class="sv" style="color:var(--accent2)">Fuse.js</span></div>
+    </div>
+  </aside>
+  <main class="chat-main">
+    <div class="topbar">
+      <div class="topbar-title">🧠 AI Knowledge Assistant</div>
+      <div class="ta">
+        <div class="ib" onclick="clearChat()" title="Clear chat">🗑️</div>
+        <div class="ib" onclick="reloadDB()" title="Reload DB">🔄</div>
+      </div>
+    </div>
+    <div class="messages" id="messages">
+      <div class="wc" id="welcome">
+        <div class="wc-icon">🧠</div>
+        <h2 class="wc-title">Hello! I'm Knowledge Pro</h2>
+        <p class="wc-sub">I'm trained on your Firebase knowledge base and use fuzzy matching — so even if you typo, I'll understand you!</p>
+        <div class="chips">
+          <div class="chip" onclick="chip(this)">Hello</div>
+          <div class="chip" onclick="chip(this)">What can you do?</div>
+          <div class="chip" onclick="chip(this)">Who are you?</div>
+          <div class="chip" onclick="chip(this)">Help me</div>
+          <div class="chip" onclick="chip(this)">Tell me a joke</div>
+        </div>
+      </div>
+    </div>
+    <div class="ia">
+      <div class="iw">
+        <textarea id="inp" placeholder="Type your message… typos are OK!" rows="1" onkeydown="keyHandler(event)" oninput="autoResize(this)"></textarea>
+        <button class="sb2" id="send-btn" onclick="send()">➤</button>
+      </div>
+      <div class="ih">Enter to send · Shift+Enter newline · Powered by Firebase + Fuse.js</div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const cfg = {
+  apiKey:"AIzaSyDczwhvoNMBNW61y5G6fulxd-f1HDNOvOw",
+  authDomain:"knowledge-pro-ai-80306.firebaseapp.com",
+  projectId:"knowledge-pro-ai-80306",
+  storageBucket:"knowledge-pro-ai-80306.firebasestorage.app",
+  messagingSenderId:"433818200322",
+  appId:"1:433818200322:web:303adb742b01453d02ba1b",
+  measurementId:"G-EGKNPD5KQ8"
+};
+const fbApp = initializeApp(cfg);
+const db    = getFirestore(fbApp);
+
+let kb=[], fuse=null, typing=false;
+
+// Load Fuse.js from CDN
+await new Promise(r=>{const s=document.createElement('script');s.src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js";s.onload=r;document.head.appendChild(s);});
+
+async function init(){
+  setDB("Connecting…",false);
+  try{
+    await loadKB();
+    onSnapshot(collection(db,"knowledge"),snap=>{buildIdx(snap);updateStats();});
+  }catch(e){
+    setDB("Error",false);toast("⚠️ "+e.message);
+    loadFallback();
+  }
+}
+
+async function loadKB(){
+  const snap=await getDocs(collection(db,"knowledge"));
+  buildIdx(snap);updateStats();setDB("Ready",true);
+  toast("✅ Knowledge base loaded — "+kb.length+" entries");
+}
+
+function buildIdx(snap){
+  kb=[];
+  snap.forEach(doc=>{
+    const d=doc.data();
+    if(d.questions&&Array.isArray(d.questions)){
+      d.questions.forEach(q=>{
+        kb.push({id:doc.id,question:q,answer:d.answer||"No answer.",category:d.category||"General",tags:d.tags||[]});
+      });
+    }
+  });
+  fuse=new Fuse(kb,{
+    keys:[{name:"question",weight:.7},{name:"tags",weight:.3}],
+    threshold:.45,distance:100,includeScore:true,minMatchCharLength:2,ignoreLocation:true
+  });
+}
+
+function loadFallback(){
+  const fd=[
+    {questions:["hello","hi","hey","helo","hii","helloo","ello"],answer:"👋 Hello! Welcome to Knowledge Pro. How can I help you today?",category:"Greetings",tags:["greet","welcome"]},
+    {questions:["good morning","gd morning","mornin","good mornin"],answer:"🌅 Good morning! Hope you have a wonderful day. How can I assist you?",category:"Greetings",tags:["morning"]},
+    {questions:["good night","gd night","goodnight","nite"],answer:"🌙 Good night! Sleep well. I'll be here whenever you need me.",category:"Greetings",tags:["night"]},
+    {questions:["good afternoon","good aftnoon","afternoon"],answer:"☀️ Good afternoon! How can I help you today?",category:"Greetings",tags:["afternoon"]},
+    {questions:["how are you","how r u","how are u","hows it going","howdy"],answer:"I'm doing great, thanks for asking! Ready to help you with anything. 😊",category:"Greetings",tags:["wellbeing"]},
+    {questions:["what is your name","who are you","what are you","your name"],answer:"I'm Knowledge Pro — your AI assistant powered by Firebase and Fuse.js fuzzy matching!",category:"About",tags:["name","identity"]},
+    {questions:["what can you do","help me","how can you help","your features"],answer:"I can answer questions from my knowledge base, understand typos using fuzzy matching, and learn new things when the admin updates the database!",category:"About",tags:["features","help"]},
+    {questions:["bye","goodbye","see you","cya","ttyl","take care"],answer:"👋 Goodbye! Come back anytime. Have a great day!",category:"Greetings",tags:["farewell"]},
+    {questions:["thank you","thanks","thx","ty","thankyou","thnx"],answer:"You're very welcome! 😊 Is there anything else I can help you with?",category:"Greetings",tags:["thanks"]},
+    {questions:["tell me a joke","joke","make me laugh","funny"],answer:"Why don't scientists trust atoms? Because they make up everything! 😄",category:"Fun",tags:["joke","humor"]},
+  ];
+  const fakeSnap={forEach:(cb)=>fd.forEach((d,i)=>cb({id:"fb_"+i,data:()=>d}))};
+  buildIdx(fakeSnap);updateStats();
+  toast("📦 Using built-in fallback dataset");
+}
+
+function queryAI(msg){
+  if(!fuse)return null;
+  const res=fuse.search(msg.trim());
+  if(!res.length)return null;
+  const b=res[0];
+  return{answer:b.item.answer,question:b.item.question,category:b.item.category,score:Math.round((1-b.score)*100)};
+}
+
+// ── GLOBAL FUNCTIONS ──
+window.send=function(){
+  const inp=document.getElementById('inp'),txt=inp.value.trim();
+  if(!txt||typing)return;
+  const w=document.getElementById('welcome');if(w)w.remove();
+  addMsg('user',txt);
+  inp.value='';autoResize(inp);
+  typing=true;document.getElementById('send-btn').disabled=true;
+  showTyping();
+  setTimeout(()=>{
+    rmTyping();typing=false;document.getElementById('send-btn').disabled=false;
+    const r=queryAI(txt);
+    r?addMsg('ai',r.answer,r):addMsg('ai',"🤔 I couldn't find an answer for that. Try rephrasing, or ask the admin to add it to the knowledge base!",null,true);
+    updateStats();
+  },500+Math.random()*400);
+};
+
+window.chip=function(el){document.getElementById('inp').value=el.textContent;window.send();};
+window.clearChat=function(){
+  document.getElementById('messages').innerHTML=`<div class="wc" id="welcome"><div class="wc-icon">✨</div><h2 class="wc-title">Fresh Start!</h2><p class="wc-sub">Ask me anything from the knowledge base.</p><div class="chips"><div class="chip" onclick="chip(this)">Hello</div><div class="chip" onclick="chip(this)">What can you do?</div></div></div>`;
+};
+window.showTopics=function(){
+  const cats=[...new Set(kb.map(e=>e.category))];
+  const w=document.getElementById('welcome');if(w)w.remove();
+  addMsg('ai',"📚 Knowledge Categories:\n\n"+cats.map(c=>"• "+c).join("\n"));
+};
+window.reloadDB=async function(){setDB("Reloading…",false);toast("🔄 Reloading…");await loadKB();};
+window.openAdmin=function(){toast("📌 Open knowledge-pro-admin.html in browser");};
+window.setActive=function(el){document.querySelectorAll('.sb').forEach(b=>b.classList.remove('active'));el.classList.add('active');};
+window.keyHandler=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();window.send();}};
+window.autoResize=function(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';};
+
+function addMsg(role,text,meta=null,nm=false){
+  const msgs=document.getElementById('messages'),now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const d=document.createElement('div');d.className=`mr ${role}`;
+  const av=role==='user'?`<div class="av">👤</div>`:`<div class="av">KP</div>`;
+  const badge=meta&&role==='ai'?`<div class="mbadge">✦ ${meta.score}% match · ${meta.category}</div>`:'';
+  d.innerHTML=`${av}<div class="mb">${badge}<div class="bub${nm?' nm':''}">${text.replace(/\n/g,'<br>')}</div><div class="mm">${now}</div></div>`;
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+}
+function showTyping(){
+  const msgs=document.getElementById('messages'),d=document.createElement('div');
+  d.className='mr ai';d.id='tr';
+  d.innerHTML=`<div class="av">KP</div><div class="typing-bub"><span class="td"></span><span class="td"></span><span class="td"></span></div>`;
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+}
+function rmTyping(){const e=document.getElementById('tr');if(e)e.remove();}
+function setDB(t,ok){const e=document.getElementById('db-ind');e.textContent=t;e.className=ok?'ok':'';}
+function updateStats(){document.getElementById('stat-e').textContent=kb.length;document.getElementById('stat-c').textContent=new Set(kb.map(e=>e.category)).size;}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+
+init();
+</script>
+</body>
+</html>
