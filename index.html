@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Knowledge Pro - AI Chat Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+    <script type="text/javascript">
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4285f4',
+                        secondary: '#34a853',
+                        accent: '#ea4335',
+                        dark: '#1a1a2e',
+                        darker: '#16162a',
+                        light: '#f8f9fa'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; width: 100%; overflow-x: hidden; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        .sidebar { transition: transform 0.3s ease-in-out; }
+        .sidebar-hidden { transform: translateX(-100%); }
+        .sidebar-visible { transform: translateX(0); }
+
+        .message-user { background: linear-gradient(135deg, #4285f4 0%, #357abd 100%); }
+        .message-ai { background: linear-gradient(135deg, #2d2d44 0%, #1a1a2e 100%); }
+        .dark .message-ai { background: linear-gradient(135deg, #3d3d5c 0%, #2a2a40 100%); }
+
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .glow-effect { box-shadow: 0 0 20px rgba(66, 133, 244, 0.3); }
+        .glow-text { text-shadow: 0 0 10px rgba(66, 133, 244, 0.5); }
+
+        .code-block { background: #1a1a2e; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+        .code-block code { color: #e0e0e0; font-family: 'Consolas', monospace; font-size: 14px; }
+        .inline-code { background: rgba(66, 133, 244, 0.2); padding: 2px 6px; border-radius: 4px; color: #4285f4; }
+
+        .scroll-smooth { scroll-behavior: smooth; }
+        .message-container { max-height: calc(100vh - 280px); overflow-y: auto; }
+
+        @media (max-width: 768px) {
+            .message-container { max-height: calc(100vh - 200px); }
+            .sidebar { position: fixed; top: 0; left: 0; height: 100%; z-index: 50; width: 280px; }
+            .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 40; }
+        }
+
+        .admin-badge { background: #ea4335; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
+        .banned-notice { background: linear-gradient(135deg, #ea4335 0%, #c5221f 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; }
+
+        .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+        .modal-content { max-height: 80vh; overflow-y: auto; }
+
+        .loading-dots::after { content: '...'; animation: dots 1.5s infinite; }
+        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; } }
+
+        .model-selector select { appearance: none; background: linear-gradient(135deg, #4285f4 0%, #357abd 100%); border: none; padding: 8px 16px; border-radius: 20px; color: white; cursor: pointer; }
+
+        input:focus, textarea:focus, select:focus { outline: 2px solid #4285f4; outline-offset: 2px; }
+
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 8px; z-index: 100; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateX(-50%) translateY(20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+
+        .red-tick { color: #ea4335; font-weight: bold; }
+
+        .source-link { color: #4285f4; text-decoration: underline; cursor: pointer; }
+        .source-link:hover { color: #357abd; }
+
+        .fake-website-warning { background: rgba(234, 67, 53, 0.2); border: 1px solid #ea4335; padding: 8px 12px; border-radius: 8px; margin: 8px 0; font-size: 12px; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-darker text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+    <!-- Loading Fallback -->
+    <div id="loading" class="fixed inset-0 flex items-center justify-center bg-white dark:bg-darker z-50">
+        <div class="text-center">
+            <div class="text-2xl font-bold text-primary glow-text mb-2">Knowledge Pro</div>
+            <p class="text-gray-500 dark:text-gray-400">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-darker dark:to-dark z-40 hidden">
+        <div class="bg-white dark:bg-dark p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 glow-effect">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-primary glow-text mb-2">Knowledge Pro</h1>
+                <p class="text-gray-500 dark:text-gray-400">Your AI-Powered Knowledge Assistant</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Email</label>
+                    <input type="email" id="login-email" required class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark focus:border-primary transition-colors" placeholder="your@email.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Password</label>
+                    <input type="password" id="login-password" required class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark focus:border-primary transition-colors" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-medium transition-colors glow-effect">Sign In</button>
+            </form>
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Don't have an account?</p>
+                <button id="show-register" class="text-primary hover:underline mt-1">Create one</button>
+            </div>
+            <form id="register-form" class="space-y-4 mt-6 hidden">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Display Name</label>
+                    <input type="text" id="register-name" required class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark focus:border-primary transition-colors" placeholder="Your Name">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Email</label>
+                    <input type="email" id="register-email" required class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark focus:border-primary transition-colors" placeholder="your@email.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Password</label>
+                    <input type="password" id="register-password" required minlength="6" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark focus:border-primary transition-colors" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full py-3 bg-secondary hover:bg-green-600 text-white rounded-lg font-medium transition-colors">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="flex flex-1 hidden">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div id="sidebar-overlay" class="sidebar-overlay hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar sidebar-hidden md:sidebar-visible w-72 bg-white dark:bg-dark border-r border-gray-200 dark:border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-primary glow-text">Knowledge Pro</h2>
+                    <button onclick="toggleSidebar()" class="md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <button onclick="newChat()" class="w-full py-3 bg-primary hover:bg-blue-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    New Chat
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="mb-4">
+                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Chat History</h3>
+                    <div id="chat-history-list" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-3 mb-3 p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
+                    <img id="user-avatar" src="" alt="Avatar" class="w-10 h-10 rounded-full object-cover">
+                    <div class="flex-1 min-w-0">
+                        <p id="user-name" class="font-medium truncate"></p>
+                        <p id="user-email" class="text-xs text-gray-500 dark:text-gray-400 truncate"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openSettings()" class="flex-1 py-2 px-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-sm transition-colors">Settings</button>
+                    <button onclick="logout()" class="flex-1 py-2 px-3 bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm transition-colors">Logout</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <!-- Top Bar -->
+            <header class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-dark/80 backdrop-blur">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div class="model-selector">
+                        <select id="model-select" onchange="changeModel()">
+                            <option value="llama2-uncensored">Llama2 Uncensored</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleDarkMode()" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" title="Toggle Dark Mode">
+                        <svg id="dark-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Messages -->
+            <div id="messages-container" class="message-container flex-1 overflow-y-auto p-4 space-y-4">
+                <div id="welcome-message" class="text-center py-12">
+                    <div class="text-5xl mb-4">🤖</div>
+                    <h2 class="text-2xl font-bold text-primary glow-text mb-2">Welcome to Knowledge Pro</h2>
+                    <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto">Start a conversation with our AI assistant. Ask anything and get detailed, sourced responses.</p>
+                </div>
+                <div id="messages-list" class="space-y-4"></div>
+            </div>
+
+            <!-- Banned Notice -->
+            <div id="banned-notice" class="hidden p-4">
+                <div class="banned-notice">
+                    <h3 class="text-xl font-bold mb-2">Account Suspended</h3>
+                    <p>You have been banned by the administrator.</p>
+                </div>
+            </div>
+
+            <!-- Deleted Chat Notice -->
+            <div id="deleted-chat-notice" class="hidden p-4">
+                <div class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 p-4 rounded-lg text-center">
+                    <p>This chat was deleted by admin</p>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-dark">
+                <div class="max-w-4xl mx-auto">
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1 relative">
+                            <textarea id="message-input" rows="1" placeholder="Ask anything..." class="w-full px-4 py-3 pr-12 rounded-2xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:border-primary transition-colors resize-none max-h-32" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                            <button onclick="toggleSystemPrompt()" class="absolute right-3 top-3 text-gray-400 hover:text-primary" title="System Prompt">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </button>
+                        </div>
+                        <button onclick="sendMessage()" id="send-btn" class="p-3 bg-primary hover:bg-blue-600 text-white rounded-full transition-colors glow-effect">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                        </button>
+                    </div>
+                    <div id="system-prompt-container" class="hidden mt-2">
+                        <textarea id="system-prompt-input" placeholder="System prompt (optional)..." class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-dark rounded-2xl shadow-2xl w-full max-w-2xl mx-4 modal-content max-h-[80vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-dark z-10">
+                <h2 class="text-2xl font-bold">Settings</h2>
+                <button onclick="closeSettings()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- Profile Section -->
+                <section>
+                    <h3 class="text-lg font-semibold mb-4">Profile</h3>
+                    <div class="flex items-center gap-4 mb-4">
+                        <img id="settings-avatar" src="" class="w-20 h-20 rounded-full object-cover border-2 border-primary">
+                        <div>
+                            <button onclick="document.getElementById('avatar-upload').click()" class="px-4 py-2 bg-primary text-white rounded-lg text-sm">Change Photo</button>
+                            <input type="file" id="avatar-upload" accept="image/*" class="hidden" onchange="uploadAvatar()">
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Display Name</label>
+                            <input type="text" id="settings-name" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Email</label>
+                            <input type="email" id="settings-email" disabled class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800">
+                        </div>
+                        <button onclick="saveProfile()" class="px-6 py-2 bg-primary text-white rounded-lg">Save Changes</button>
+                    </div>
+                </section>
+
+                <!-- Admin Section -->
+                <section id="admin-section" class="hidden">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        Admin Panel
+                        <span class="admin-badge">ADMIN</span>
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="showAdminTab('blocked-words')" class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm admin-tab active">Blocked Words</button>
+                            <button onclick="showAdminTab('models')" class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm admin-tab">Models</button>
+                            <button onclick="showAdminTab('users-history')" class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm admin-tab">Users History</button>
+                            <button onclick="showAdminTab('training')" class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm admin-tab">Training Data</button>
+                            <button onclick="showAdminTab('firebase')" class="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm admin-tab">Firebase Config</button>
+                        </div>
+
+                        <!-- Blocked Words -->
+                        <div id="blocked-words-tab" class="admin-tab-content">
+                            <h4 class="font-medium mb-2">Blocked Words</h4>
+                            <div class="flex gap-2 mb-3">
+                                <input type="text" id="blocked-word-input" placeholder="Add blocked word..." class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                <button onclick="addBlockedWord()" class="px-4 py-2 bg-primary text-white rounded-lg">Add</button>
+                            </div>
+                            <div id="blocked-words-list" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <!-- Models -->
+                        <div id="models-tab" class="admin-tab-content hidden">
+                            <h4 class="font-medium mb-2">Model Management</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Model Name</label>
+                                    <input type="text" id="new-model-name" placeholder="e.g., v1, v2, Pro..." class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Model ID</label>
+                                    <input type="text" id="new-model-id" placeholder="e.g., llama2-v1" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="model-free" checked>
+                                    <label for="model-free" class="text-sm">Free for users</label>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Expiry</label>
+                                    <select id="model-expiry" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                        <option value="never">Never</option>
+                                        <option value="1d">1 Day</option>
+                                        <option value="4d">4 Days</option>
+                                        <option value="7d">7 Days</option>
+                                        <option value="30d">30 Days</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Training Data</label>
+                                    <select id="model-training-data" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                        <option value="">None</option>
+                                    </select>
+                                </div>
+                                <button onclick="createModel()" class="w-full py-2 bg-secondary text-white rounded-lg">Create Model</button>
+                            </div>
+                            <div id="models-list" class="mt-4 space-y-2"></div>
+                        </div>
+
+                        <!-- Users History -->
+                        <div id="users-history-tab" class="admin-tab-content hidden">
+                            <h4 class="font-medium mb-2">User Management</h4>
+                            <div id="users-list" class="space-y-2"></div>
+                        </div>
+
+                        <!-- Training Data -->
+                        <div id="training-tab" class="admin-tab-content hidden">
+                            <h4 class="font-medium mb-2">AI Training</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Training Name</label>
+                                    <input type="text" id="training-name" placeholder="e.g., Medical Knowledge" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Upload CSV/Text</label>
+                                    <input type="file" id="training-file" accept=".csv,.txt" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                </div>
+                                <button onclick="uploadTrainingData()" class="w-full py-2 bg-secondary text-white rounded-lg">Upload Training Data</button>
+                            </div>
+                            <div id="training-list" class="mt-4 space-y-2"></div>
+                        </div>
+
+                        <!-- Firebase Config -->
+                        <div id="firebase-tab" class="admin-tab-content hidden">
+                            <h4 class="font-medium mb-2">Firebase Configuration</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">API Key</label>
+                                    <input type="text" id="firebase-api-key" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Auth Domain</label>
+                                    <input type="text" id="firebase-auth-domain" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Database URL</label>
+                                    <input type="text" id="firebase-db-url" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Project ID</label>
+                                    <input type="text" id="firebase-project-id" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                </div>
+                                <button onclick="saveFirebaseConfig()" class="w-full py-2 bg-primary text-white rounded-lg">Save Firebase Config</button>
+                            </div>
+                        </div>
+
+                        <!-- Make Admin -->
+                        <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                            <h4 class="font-medium mb-2">Manage Admins</h4>
+                            <div class="flex gap-2">
+                                <input type="email" id="admin-email-input" placeholder="User email..." class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-dark">
+                                <button onclick="toggleAdmin()" class="px-4 py-2 bg-primary text-white rounded-lg">Toggle Admin</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- User Chat History -->
+                <section id="user-history-section">
+                    <h3 class="text-lg font-semibold mb-4">My Chat History</h3>
+                    <div id="user-chat-history" class="space-y-2"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+    <!-- Main Application Script -->
+    <script>
+        // Hide loading screen
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Firebase Configuration
+        let firebaseConfig = {
+            apiKey: "AIzaSyBwUiAIfzsxqCwaFn0FNd9nHgvB64Qq-vo",
+            authDomain: "infinite-chats-web-app.firebaseapp.com",
+            databaseURL: "https://infinite-chats-web-app-default-rtdb.firebaseio.com",
+            projectId: "infinite-chats-web-app",
+            storageBucket: "infinite-chats-web-app.firebasestorage.app",
+            messagingSenderId: "464599055942",
+            appId: "1:464599055942:web:9cc3b8edf71736acbbd447",
+            measurementId: "G-PBN5JLE8PC"
+        };
+
+        // Initialize Firebase
+        let app, auth, db, storage;
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.database();
+            storage = firebase.storage();
+        } catch (e) {
+            console.error('Firebase initialization error:', e);
+        }
+
+        // Global State
+        let currentUser = null;
+        let currentChatId = null;
+        let isDarkMode = false;
+        let isAdmin = false;
+        let isBanned = false;
+        let blockedWords = [];
+        let models = [];
+        let trainingData = [];
+        let users = {};
+        let chatHistories = {};
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', function() {
+            hideLoading();
+            initAuth();
+            loadDarkMode();
+            loadSavedSession();
+        });
+
+        // Auth Functions
+        function initAuth() {
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    currentUser = user;
+                    await loadUserData();
+                    showApp();
+                } else {
+                    showLogin();
+                }
+            });
+        }
+
+        function showLogin() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app').classList.add('hidden');
+        }
+
+        function showApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            updateUserInfo();
+            loadChatHistory();
+            loadModels();
+            loadBlockedWords();
+            loadTrainingData();
+
+            if (isAdmin) {
+                document.getElementById('admin-section').classList.remove('hidden');
+                loadUsers();
+            }
+        }
+
+        async function loadUserData() {
+            try {
+                const userRef = db.ref('users/' + currentUser.uid);
+                const snapshot = await userRef.once('value');
+                const userData = snapshot.val();
+
+                if (userData) {
+                    isAdmin = userData.isAdmin || false;
+                    isBanned = userData.isBanned || false;
+
+                    if (isBanned) {
+                        document.getElementById('banned-notice').classList.remove('hidden');
+                        document.getElementById('message-input').disabled = true;
+                        document.getElementById('send-btn').disabled = true;
+                    }
+                } else {
+                    // Create new user
+                    await userRef.set({
+                        email: currentUser.email,
+                        name: currentUser.displayName || currentUser.email.split('@')[0],
+                        isAdmin: false,
+                        isBanned: false,
+                        createdAt: Date.now(),
+                        avatar: currentUser.photoURL || ''
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading user data:', e);
+            }
+        }
+
+        function updateUserInfo() {
+            const name = currentUser.displayName || currentUser.email.split('@')[0];
+            document.getElementById('user-name').textContent = name + (isAdmin ? ' (Admin)' : '');
+            document.getElementById('user-email').textContent = currentUser.email;
+            document.getElementById('user-avatar').src = currentUser.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234285f4"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z"/></svg>';
+
+            document.getElementById('settings-name').value = name;
+            document.getElementById('settings-email').value = currentUser.email;
+            document.getElementById('settings-avatar').src = currentUser.photoURL || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234285f4"><circle cx="12" cy="8" r="4"/><path d="M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z"/></svg>';
+        }
+
+        // Login/Register Forms
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                localStorage.setItem('knowledge_pro_email', email);
+                showToast('Welcome back!', 'success');
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            try {
+                const cred = await auth.createUserWithEmailAndPassword(email, password);
+                await cred.user.updateProfile({ displayName: name });
+                await db.ref('users/' + cred.user.uid).set({
+                    email: email,
+                    name: name,
+                    isAdmin: false,
+                    isBanned: false,
+                    createdAt: Date.now(),
+                    avatar: ''
+                });
+                localStorage.setItem('knowledge_pro_email', email);
+                showToast('Account created!', 'success');
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        });
+
+        document.getElementById('show-register').addEventListener('click', () => {
+            document.getElementById('register-form').classList.toggle('hidden');
+        });
+
+        function logout() {
+            auth.signOut();
+            localStorage.removeItem('knowledge_pro_email');
+            currentUser = null;
+            currentChatId = null;
+            isAdmin = false;
+            isBanned = false;
+        }
+
+        function loadSavedSession() {
+            const savedEmail = localStorage.getItem('knowledge_pro_email');
+            if (savedEmail && auth.currentUser) {
+                // Already logged in via Firebase persistence
+            }
+        }
+
+        // Dark Mode
+        function loadDarkMode() {
+            isDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('dark-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+            }
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDarkMode);
+            if (isDarkMode) {
+                document.getElementById('dark-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+            } else {
+                document.getElementById('dark-icon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+            }
+        }
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('sidebar-hidden');
+            sidebar.classList.toggle('sidebar-visible');
+            overlay.classList.toggle('hidden');
+        }
+
+        // Chat Functions
+        function newChat() {
+            currentChatId = 'chat_' + Date.now();
+            document.getElementById('messages-list').innerHTML = '';
+            document.getElementById('welcome-message').classList.remove('hidden');
+            document.getElementById('system-prompt-input').value = '';
+
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+
+            saveChat(currentChatId, []);
+            loadChatHistory();
+        }
+
+        async function saveChat(chatId, messages) {
+            if (!currentUser) return;
+            try {
+                await db.ref('chats/' + currentUser.uid + '/' + chatId).set({
+                    id: chatId,
+                    messages: messages,
+                    updatedAt: Date.now(),
+                    title: messages[0]?.text?.substring(0, 30) + '...' || 'New Chat'
+                });
+            } catch (e) {
+                console.error('Error saving chat:', e);
+            }
+        }
+
+        async function loadChatHistory() {
+            if (!currentUser) return;
+            try {
+                const snapshot = await db.ref('chats/' + currentUser.uid).once('value');
+                chatHistories = snapshot.val() || {};
+                renderChatHistory();
+            } catch (e) {
+                console.error('Error loading chat history:', e);
+            }
+        }
+
+        function renderChatHistory() {
+            const container = document.getElementById('chat-history-list');
+            const chats = Object.values(chatHistories).sort((a, b) => b.updatedAt - a.updatedAt);
+
+            container.innerHTML = chats.map(chat => `
+                <div class="group flex items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-blue-50 dark:bg-blue-900/20' : ''}" onclick="loadChat('${chat.id}')">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                    <span class="flex-1 truncate text-sm">${escapeHtml(chat.title)}</span>
+                    <button onclick="event.stopPropagation(); renameChat('${chat.id}')" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-primary">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                    <button onclick="event.stopPropagation(); deleteChat('${chat.id}')" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function loadChat(chatId) {
+            currentChatId = chatId;
+            const chat = chatHistories[chatId];
+
+            if (!chat) {
+                document.getElementById('deleted-chat-notice').classList.remove('hidden');
+                document.getElementById('messages-list').innerHTML = '';
+                return;
+            }
+
+            document.getElementById('deleted-chat-notice').classList.add('hidden');
+            document.getElementById('welcome-message').classList.add('hidden');
+
+            const container = document.getElementById('messages-list');
+            container.innerHTML = chat.messages.map((msg, i) => createMessageHTML(msg.text, msg.sender, msg.timestamp)).join('');
+
+            scrollToBottom();
+            renderChatHistory();
+
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+
+        async function deleteChat(chatId) {
+            if (!confirm('Delete this chat?')) return;
+            try {
+                await db.ref('chats/' + currentUser.uid + '/' + chatId).remove();
+                delete chatHistories[chatId];
+                if (currentChatId === chatId) {
+                    currentChatId = null;
+                    document.getElementById('messages-list').innerHTML = '';
+                    document.getElementById('welcome-message').classList.remove('hidden');
+                }
+                loadChatHistory();
+                showToast('Chat deleted', 'success');
+            } catch (e) {
+                showToast('Error deleting chat', 'error');
+            }
+        }
+
+        async function renameChat(chatId) {
+            const newTitle = prompt('Enter new chat name:');
+            if (!newTitle) return;
+            try {
+                await db.ref('chats/' + currentUser.uid + '/' + chatId).update({ title: newTitle });
+                chatHistories[chatId].title = newTitle;
+                renderChatHistory();
+                showToast('Chat renamed', 'success');
+            } catch (e) {
+                showToast('Error renaming chat', 'error');
+            }
+        }
+
+        // Message Functions
+        function createMessageHTML(text, sender, timestamp) {
+            const isUser = sender === 'user';
+            const time = new Date(timestamp).toLocaleTimeString();
+
+            return `
+                <div class="flex ${isUser ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-[85%] md:max-w-[70%] ${isUser ? 'message-user' : 'message-ai'} rounded-2xl px-4 py-3 shadow-lg">
+                        <div class="text-white prose prose-sm dark:prose-invert max-w-none">
+                            ${isUser ? escapeHtml(text) : marked.parse(text)}
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2">${time}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
+        }
+
+        function toggleSystemPrompt() {
+            document.getElementById('system-prompt-container').classList.toggle('hidden');
+        }
+
+        async function sendMessage() {
+            if (isBanned) {
+                showToast('You are banned by admin', 'error');
+                return;
+            }
+
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            // Check blocked words
+            const blockedMatch = blockedWords.some(word => text.toLowerCase().includes(word.toLowerCase()));
+            if (blockedMatch) {
+                showToast('Sorry, this question is against the guidelines', 'error');
+                return;
+            }
+
+            input.value = '';
+            input.style.height = 'auto';
+
+            document.getElementById('welcome-message').classList.add('hidden');
+
+            // Add user message
+            const userMsgHTML = createMessageHTML(text, 'user', Date.now());
+            document.getElementById('messages-list').insertAdjacentHTML('beforeend', userMsgHTML);
+
+            // Initialize chat if needed
+            if (!currentChatId) {
+                currentChatId = 'chat_' + Date.now();
+            }
+
+            // Save user message
+            const chat = chatHistories[currentChatId] || { id: currentChatId, messages: [], title: text.substring(0, 30) + '...' };
+            chat.messages.push({ text, sender: 'user', timestamp: Date.now() });
+            await saveChat(currentChatId, chat.messages);
+
+            scrollToBottom();
+
+            // Get AI response
+            await getAIResponse(text);
+        }
+
+        async function getAIResponse(userText) {
+            const systemPrompt = document.getElementById('system-prompt-input').value;
+
+            // Create placeholder for AI message
+            const aiMsgId = 'ai-' + Date.now();
+            const aiMsgHTML = `
+                <div class="flex justify-start">
+                    <div class="max-w-[85%] md:max-w-[70%] message-ai rounded-2xl px-4 py-3 shadow-lg">
+                        <div id="${aiMsgId}" class="text-white prose prose-sm dark:prose-invert max-w-none typing-cursor">
+                            <span class="loading-dots">Thinking</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2">${new Date().toLocaleTimeString()}</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('messages-list').insertAdjacentHTML('beforeend', aiMsgHTML);
+            scrollToBottom();
+
+            try {
+                // Build prompt with training data context
+                const trainingContext = trainingData.length > 0
+                    ? `\n\nRelevant training data:\n${trainingData.map(t => t.content).join('\n')}`
+                    : '';
+
+                const fullPrompt = `${systemPrompt ? systemPrompt + '\n\n' : ''}You are a helpful AI assistant. Chat like humanise language and all response must be sourced. Deep search about the topic and then summarise and then answer. Also show fake websites and say it's a fake website that doesn't have any information on it related to the topic or they're just getting scammed. The model didn't respond with those words that are bad words.\n\nUser question: ${userText}${trainingContext}\n\nAnswer:`;
+
+                // Call Ollama API
+                const response = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'llama2-uncensored',
+                        prompt: fullPrompt,
+                        stream: true
+                    })
+                }).catch(() => null);
+
+                let aiResponse = '';
+
+                if (response && response.ok) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    const contentDiv = document.getElementById(aiMsgId);
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.trim()) {
+                                try {
+                                    const data = JSON.parse(line);
+                                    if (data.response) {
+                                        aiResponse += data.response;
+                                        contentDiv.innerHTML = marked.parse(aiResponse);
+                                        scrollToBottom();
+                                    }
+                                } catch (e) {
+                                    // Ignore parse errors
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Fallback response
+                    aiResponse = "Thanks for feedback! I'm currently running on local Ollama. Make sure Ollama is running with `ollama run llama2-uncensored`.\n\nFor image generation, I use x/z-image-turbo model.\n\n**Sources:**\n- [Official Documentation](https://example.com)\n- [Research Paper](https://research.example.com)\n\n*Note: Some websites claiming to have this information are fake and may be scamming users.*";
+                }
+
+                // Update message
+                document.getElementById(aiMsgId).innerHTML = marked.parse(aiResponse);
+                document.getElementById(aiMsgId).classList.remove('typing-cursor');
+
+                // Save AI message
+                chat.messages.push({ text: aiResponse, sender: 'ai', timestamp: Date.now() });
+                await saveChat(currentChatId, chat.messages);
+                chatHistories[currentChatId] = chat;
+
+            } catch (e) {
+                console.error('AI response error:', e);
+                const errorMsg = "Thanks for feedback! (Error: " + e.message + ")\n\n**Sources:**\n- [Fake Website Warning](https://fake-warning.example.com)\n\n*This website is fake and doesn't have real information.*";
+                document.getElementById(aiMsgId).innerHTML = marked.parse(errorMsg);
+                document.getElementById(aiMsgId).classList.remove('typing-cursor');
+            }
+
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messages-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Settings Functions
+        function openSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            if (isAdmin) {
+                loadBlockedWords();
+                loadModels();
+                loadTrainingData();
+                loadUsers();
+            }
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        async function saveProfile() {
+            const name = document.getElementById('settings-name').value;
+            try {
+                await currentUser.updateProfile({ displayName: name });
+                await db.ref('users/' + currentUser.uid).update({ name });
+                updateUserInfo();
+                showToast('Profile saved', 'success');
+            } catch (e) {
+                showToast('Error saving profile', 'error');
+            }
+        }
+
+        async function uploadAvatar() {
+            const file = document.getElementById('avatar-upload').files[0];
+            if (!file) return;
+
+            try {
+                const storageRef = storage.ref('avatars/' + currentUser.uid);
+                await storageRef.put(file);
+                const url = await storageRef.getDownloadURL();
+                await currentUser.updateProfile({ photoURL: url });
+                await db.ref('users/' + currentUser.uid).update({ avatar: url });
+                document.getElementById('settings-avatar').src = url;
+                document.getElementById('user-avatar').src = url;
+                showToast('Avatar updated', 'success');
+            } catch (e) {
+                showToast('Error uploading avatar: ' + e.message, 'error');
+            }
+        }
+
+        // Admin Functions
+        function showAdminTab(tab) {
+            document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('bg-primary', 'text-white'));
+
+            document.getElementById(tab + '-tab').classList.remove('hidden');
+            event.target.classList.add('bg-primary', 'text-white');
+        }
+
+        async function loadBlockedWords() {
+            try {
+                const snapshot = await db.ref('settings/blockedWords').once('value');
+                blockedWords = snapshot.val() || [];
+                renderBlockedWords();
+            } catch (e) {
+                console.error('Error loading blocked words:', e);
+            }
+        }
+
+        function renderBlockedWords() {
+            const container = document.getElementById('blocked-words-list');
+            container.innerHTML = blockedWords.map(word => `
+                <span class="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-sm flex items-center gap-2">
+                    ${escapeHtml(word)}
+                    <button onclick="removeBlockedWord('${escapeHtml(word)}')" class="hover:text-red-800">&times;</button>
+                </span>
+            `).join('');
+        }
+
+        async function addBlockedWord() {
+            const word = document.getElementById('blocked-word-input').value.trim();
+            if (!word) return;
+
+            blockedWords.push(word);
+            await db.ref('settings/blockedWords').set(blockedWords);
+            document.getElementById('blocked-word-input').value = '';
+            renderBlockedWords();
+            showToast('Word blocked', 'success');
+        }
+
+        async function removeBlockedWord(word) {
+            blockedWords = blockedWords.filter(w => w !== word);
+            await db.ref('settings/blockedWords').set(blockedWords);
+            renderBlockedWords();
+            showToast('Word removed', 'success');
+        }
+
+        async function loadModels() {
+            try {
+                const snapshot = await db.ref('models').once('value');
+                models = snapshot.val() || {};
+                renderModels();
+                updateModelSelector();
+            } catch (e) {
+                console.error('Error loading models:', e);
+            }
+        }
+
+        function renderModels() {
+            const container = document.getElementById('models-list');
+            container.innerHTML = Object.entries(models).map(([id, model]) => `
+                <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-between">
+                    <div>
+                        <p class="font-medium">${escapeHtml(model.name)}</p>
+                        <p class="text-sm text-gray-500">ID: ${escapeHtml(id)} | Free: ${model.free ? 'Yes' : 'No'} | Expiry: ${model.expiry}</p>
+                    </div>
+                    <button onclick="deleteModel('${id}')" class="text-red-500 hover:text-red-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            `).join('');
+
+            // Update training data selector
+            const trainingSelect = document.getElementById('model-training-data');
+            trainingSelect.innerHTML = '<option value="">None</option>' + trainingData.map(t => `
+                <option value="${t.id}">${escapeHtml(t.name)}</option>
+            `).join('');
+        }
+
+        function updateModelSelector() {
+            const selector = document.getElementById('model-select');
+            const current = selector.value;
+            selector.innerHTML = Object.entries(models).filter(([, m]) => m.free || isAdmin).map(([id, model]) => `
+                <option value="${id}">${escapeHtml(model.name)}</option>
+            `).join('');
+            if (models[current]) selector.value = current;
+        }
+
+        async function createModel() {
+            const name = document.getElementById('new-model-name').value.trim();
+            const id = document.getElementById('new-model-id').value.trim();
+            const free = document.getElementById('model-free').checked;
+            const expiry = document.getElementById('model-expiry').value;
+            const trainingDataId = document.getElementById('model-training-data').value;
+
+            if (!name || !id) {
+                showToast('Please fill in name and ID', 'error');
+                return;
+            }
+
+            await db.ref('models/' + id).set({
+                name,
+                id,
+                free,
+                expiry,
+                trainingDataId,
+                createdAt: Date.now(),
+                createdBy: currentUser.uid
+            });
+
+            document.getElementById('new-model-name').value = '';
+            document.getElementById('new-model-id').value = '';
+            loadModels();
+            showToast('Model created', 'success');
+        }
+
+        async function deleteModel(id) {
+            if (!confirm('Delete this model?')) return;
+            await db.ref('models/' + id).remove();
+            loadModels();
+            showToast('Model deleted', 'success');
+        }
+
+        function changeModel() {
+            showToast('Model changed to ' + document.getElementById('model-select').value, 'success');
+        }
+
+        async function loadUsers() {
+            try {
+                const snapshot = await db.ref('users').once('value');
+                users = snapshot.val() || {};
+                renderUsers();
+            } catch (e) {
+                console.error('Error loading users:', e);
+            }
+        }
+
+        function renderUsers() {
+            const container = document.getElementById('users-list');
+            container.innerHTML = Object.entries(users).map(([uid, user]) => `
+                <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="${user.avatar || 'data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"%234285f4\"><circle cx=\"12\" cy=\"8\" r=\"4\"/></svg>'}" class="w-8 h-8 rounded-full">
+                        <div>
+                            <p class="font-medium">${escapeHtml(user.name)} ${user.isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</p>
+                            <p class="text-sm text-gray-500">${escapeHtml(user.email)}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        ${!user.isAdmin ? `<button onclick="banUser('${uid}')" class="px-3 py-1 bg-red-500 text-white rounded text-sm">Ban</button>` : ''}
+                        <button onclick="deleteUserHistory('${uid}')" class="px-3 py-1 bg-gray-500 text-white rounded text-sm">Delete History</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function banUser(uid) {
+            if (!confirm('Ban this user?')) return;
+            await db.ref('users/' + uid).update({ isBanned: true });
+            loadUsers();
+            showToast('User banned', 'success');
+        }
+
+        async function deleteUserHistory(uid) {
+            if (!confirm('Delete all chat history for this user?')) return;
+            await db.ref('chats/' + uid).remove();
+            showToast('User history deleted', 'success');
+        }
+
+        async function toggleAdmin() {
+            const email = document.getElementById('admin-email-input').value.trim();
+            if (!email) return;
+
+            // Find user by email
+            const userEntry = Object.entries(users).find(([, u]) => u.email === email);
+            if (!userEntry) {
+                showToast('User not found', 'error');
+                return;
+            }
+
+            const [uid, user] = userEntry;
+            const newAdminStatus = !user.isAdmin;
+
+            await db.ref('users/' + uid).update({ isAdmin: newAdminStatus });
+            loadUsers();
+            showToast(newAdminStatus ? 'User made admin' : 'Admin removed', 'success');
+        }
+
+        async function loadTrainingData() {
+            try {
+                const snapshot = await db.ref('training').once('value');
+                trainingData = Object.entries(snapshot.val() || {}).map(([id, data]) => ({ id, ...data }));
+                renderTrainingData();
+            } catch (e) {
+                console.error('Error loading training data:', e);
+            }
+        }
+
+        function renderTrainingData() {
+            const container = document.getElementById('training-list');
+            container.innerHTML = trainingData.map(t => `
+                <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-between">
+                    <div>
+                        <p class="font-medium">${escapeHtml(t.name)}</p>
+                        <p class="text-sm text-gray-500">${t.lines || 0} entries</p>
+                    </div>
+                    <button onclick="deleteTrainingData('${t.id}')" class="text-red-500 hover:text-red-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function uploadTrainingData() {
+            const name = document.getElementById('training-name').value.trim();
+            const file = document.getElementById('training-file').files[0];
+
+            if (!name || !file) {
+                showToast('Please fill in name and select a file', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const content = e.target.result;
+                const lines = content.split('\n').filter(l => l.trim());
+
+                const trainingId = 'train_' + Date.now();
+                await db.ref('training/' + trainingId).set({
+                    name,
+                    content: content.substring(0, 100000), // Limit size
+                    lines: lines.length,
+                    uploadedAt: Date.now(),
+                    uploadedBy: currentUser.uid
+                });
+
+                document.getElementById('training-name').value = '';
+                document.getElementById('training-file').value = '';
+                loadTrainingData();
+                showToast('Training data uploaded', 'success');
+            };
+            reader.readAsText(file);
+        }
+
+        async function deleteTrainingData(id) {
+            if (!confirm('Delete this training data?')) return;
+            await db.ref('training/' + id).remove();
+            loadTrainingData();
+            showToast('Training data deleted', 'success');
+        }
+
+        async function saveFirebaseConfig() {
+            const config = {
+                apiKey: document.getElementById('firebase-api-key').value,
+                authDomain: document.getElementById('firebase-auth-domain').value,
+                databaseURL: document.getElementById('firebase-db-url').value,
+                projectId: document.getElementById('firebase-project-id').value
+            };
+
+            await db.ref('settings/firebaseConfig').set(config);
+            showToast('Firebase config saved', 'success');
+        }
+
+        // User Chat History in Settings
+        async function loadUserChatHistory() {
+            const container = document.getElementById('user-chat-history');
+            const chats = Object.values(chatHistories).sort((a, b) => b.updatedAt - a.updatedAt);
+
+            container.innerHTML = chats.map(chat => `
+                <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-between">
+                    <span class="truncate">${escapeHtml(chat.title)}</span>
+                    <button onclick="deleteChat('${chat.id}')" class="text-red-500 hover:text-red-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Toast Notifications
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const colors = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-gray-700' };
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${colors[type]}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Utility Functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Fuse.js Search for chat history
+        let fuse;
+        function initSearch() {
+            const chatList = Object.values(chatHistories);
+            fuse = new Fuse(chatList, { keys: ['title'] });
+        }
+
+        // Initialize on first load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add red tick to admin names
+            const originalUpdateUserInfo = updateUserInfo;
+            updateUserInfo = function() {
+                originalUpdateUserInfo();
+                if (isAdmin) {
+                    document.getElementById('user-name').innerHTML = (currentUser.displayName || currentUser.email.split('@')[0]) + ' <span class="red-tick">✓</span>';
+                }
+            };
+        });
+
+        console.log('Knowledge Pro initialized');
+    </script>
+</body>
+</html>
