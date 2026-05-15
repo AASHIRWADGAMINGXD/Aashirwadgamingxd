@@ -579,24 +579,54 @@
     <div class="sec-head">
       <div>
         <h2>Issue New Licence</h2>
-        <p>Generate a new signed licence key for a customer</p>
+        <p>Generate a licence key + JSON file &rarr; commit to GitHub &rarr; client activates instantly</p>
       </div>
     </div>
 
-    <div style="max-width:560px;">
+    <!-- HOW IT WORKS BANNER -->
+    <div style="background:rgba(59,110,255,.08);border:1px solid rgba(59,110,255,.25);border-radius:var(--radius);padding:1.1rem 1.4rem;margin-bottom:1.75rem;max-width:860px;">
+      <div style="font-size:.78rem;font-family:var(--mono);color:var(--accent2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.7rem;">
+        <i class="fas fa-circle-info"></i>&nbsp; GitHub Pages Workflow
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.75rem;">
+        <div style="display:flex;align-items:flex-start;gap:.6rem;">
+          <span style="background:var(--accent2);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0;margin-top:.1rem;">1</span>
+          <span style="font-size:.82rem;color:var(--txt2);">Fill the form &amp; click <b style="color:var(--txt);">Generate</b> &mdash; a signed <code style="font-size:.75rem;color:var(--accent);">.json</code> envelope is created in the browser</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:.6rem;">
+          <span style="background:var(--accent2);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0;margin-top:.1rem;">2</span>
+          <span style="font-size:.82rem;color:var(--txt2);">Download the file. Place it in your repo at the exact path shown</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:.6rem;">
+          <span style="background:var(--accent2);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0;margin-top:.1rem;">3</span>
+          <span style="font-size:.82rem;color:var(--txt2);">Commit &amp; push &mdash; GitHub Pages serves it. Client validates within seconds</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:.6rem;">
+          <span style="background:rgba(255,69,69,.15);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0;margin-top:.1rem;">4</span>
+          <span style="font-size:.82rem;color:var(--txt2);">To <b style="color:var(--danger);">revoke</b>: delete the file from the repo &amp; push. Client deactivates on next check</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;max-width:900px;">
+
+      <!-- FORM -->
       <div class="table-wrap" style="padding:1.5rem;">
-        <div id="newKeyDisplay" style="display:none;">
-          <p style="font-size:.8rem;color:var(--txt2);margin-bottom:.5rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;">Generated Key</p>
-          <div class="key-display" id="generatedKey">
-            <button class="copy-btn" onclick="copyKey()"><i class="fas fa-copy"></i> Copy</button>
-            <span id="keyText"></span>
+        <div style="font-size:.78rem;font-family:var(--mono);color:var(--txt3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1rem;">Licence Details</div>
+
+        <div class="form-field">
+          <label>Licence Key</label>
+          <div style="display:flex;gap:.5rem;">
+            <input type="text" id="i-key" placeholder="HVM-XXXX-XXXX-XXXX-2026" style="flex:1;" />
+            <button onclick="genKey()" style="background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--txt2);padding:0 .75rem;cursor:pointer;font-size:.85rem;" title="Auto-generate key">
+              <i class="fas fa-dice"></i>
+            </button>
           </div>
-          <div class="badge active" style="margin-bottom:1.25rem;"><span class="badge-dot"></span> Created successfully</div>
         </div>
 
         <div class="form-row">
           <div class="form-field">
-            <label>Owner / Customer Name</label>
+            <label>Owner Name</label>
             <input type="text" id="i-owner" placeholder="e.g. Acme Corp" />
           </div>
           <div class="form-field">
@@ -621,21 +651,70 @@
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-field">
-            <label>Expiry Date</label>
-            <input type="date" id="i-expiry" />
+        <div class="form-field">
+          <label>Expiry Date</label>
+          <input type="date" id="i-expiry" />
+        </div>
+
+        <div class="form-field">
+          <label>Notes (optional)</label>
+          <input type="text" id="i-notes" placeholder="Internal notes..." />
+        </div>
+
+        <button class="btn-create" style="width:100%;padding:.8rem;margin-top:.25rem;" onclick="issueLicence()">
+          <i class="fas fa-key"></i>&nbsp; Generate Licence File
+        </button>
+      </div>
+
+      <!-- OUTPUT -->
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="table-wrap" style="padding:1.25rem;">
+          <div style="font-size:.78rem;font-family:var(--mono);color:var(--txt3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.85rem;">Output</div>
+
+          <div id="outputEmpty" style="color:var(--txt3);font-size:.85rem;text-align:center;padding:2.5rem 0;">
+            <i class="fas fa-arrow-left" style="margin-right:.4rem;"></i> Fill the form and click Generate
           </div>
-          <div class="form-field">
-            <label>Notes (optional)</label>
-            <input type="text" id="i-notes" placeholder="Internal notes..." />
+
+          <div id="outputFilled" style="display:none;">
+            <div style="font-size:.72rem;font-family:var(--mono);color:var(--txt3);text-transform:uppercase;letter-spacing:1px;margin-bottom:.3rem;">Licence Key (send to customer)</div>
+            <div class="key-display" style="margin-bottom:.9rem;padding-right:2.5rem;">
+              <button class="copy-btn" onclick="copyText(document.getElementById('outKey').textContent)"><i class="fas fa-copy"></i></button>
+              <span id="outKey" style="word-break:break-all;font-size:.8rem;"></span>
+            </div>
+
+            <div style="font-size:.72rem;font-family:var(--mono);color:var(--txt3);text-transform:uppercase;letter-spacing:1px;margin-bottom:.3rem;">Commit this file to your GitHub repo</div>
+            <div style="background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.6rem .9rem;font-family:var(--mono);font-size:.76rem;color:var(--accent);word-break:break-all;margin-bottom:1rem;position:relative;padding-right:2.5rem;">
+              <button class="copy-btn" style="top:.5rem;right:.5rem;" onclick="copyText(document.getElementById('outPath').textContent)"><i class="fas fa-copy"></i></button>
+              <span id="outPath"></span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem;">
+              <button class="btn-create" style="padding:.7rem;" onclick="downloadJSON()">
+                <i class="fas fa-download"></i>&nbsp; Download
+              </button>
+              <button class="btn-create" style="padding:.7rem;background:linear-gradient(135deg,#238636,#1a6e2c);" onclick="pushToGitHub()" id="pushBtn">
+                <i class="fab fa-github"></i>&nbsp; Push to GitHub
+              </button>
+            </div>
+
+            <div id="pushStatus" style="display:none;padding:.75rem;border-radius:9px;font-size:.78rem;margin-bottom:.75rem;"></div>
+
+            <div style="padding:.75rem;background:rgba(0,245,196,.06);border:1px solid rgba(0,245,196,.2);border-radius:9px;font-size:.78rem;color:var(--txt2);">
+              <i class="fas fa-circle-check" style="color:var(--accent);margin-right:.4rem;"></i>
+              Push directly to <code style="color:var(--accent);">licenses/</code> in your GitHub repo. Client validates within seconds of the push.
+            </div>
           </div>
         </div>
 
-        <button class="btn-create" style="width:100%;padding:.8rem;" onclick="issueLicence()">
-          <i class="fas fa-key"></i>&nbsp; Generate & Sign Licence
-        </button>
+        <div class="table-wrap" style="padding:1.25rem;display:none;" id="emailBox">
+          <div style="font-size:.78rem;font-family:var(--mono);color:var(--txt3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.75rem;">Email Template</div>
+          <textarea id="emailPreview" rows="7" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--txt2);padding:.75rem;font-family:var(--mono);font-size:.74rem;resize:vertical;"></textarea>
+          <button onclick="copyText(document.getElementById('emailPreview').value)" class="tb-btn" style="margin-top:.5rem;width:100%;justify-content:center;">
+            <i class="fas fa-copy"></i>&nbsp; Copy Email Template
+          </button>
+        </div>
       </div>
+
     </div>
   </div>
 
@@ -703,13 +782,29 @@
     </div>
     <div style="max-width:500px;">
       <div class="table-wrap" style="padding:1.5rem;">
+        <div style="font-size:.78rem;font-family:var(--mono);color:var(--accent2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:.85rem;padding:.6rem .9rem;background:rgba(59,110,255,.08);border:1px solid rgba(59,110,255,.2);border-radius:8px;">
+          <i class="fas fa-github"></i>&nbsp; GitHub Push Settings
+        </div>
+        <div class="form-field">
+          <label>GitHub Repository</label>
+          <input type="text" id="cfg-repo" value="AASHIRWADGAMINGXD/Aashirwadgamingxd" placeholder="owner/repo" />
+        </div>
+        <div class="form-field">
+          <label>GitHub Branch</label>
+          <input type="text" id="cfg-branch" value="main" placeholder="main" />
+        </div>
+        <div class="form-field">
+          <label>Personal Access Token (PAT)</label>
+          <div style="position:relative;">
+            <input type="password" id="cfg-pat" placeholder="Paste your new token here..." style="width:100%;padding-right:2.5rem;" />
+            <button onclick="togglePAT()" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--txt2);cursor:pointer;font-size:.85rem;" title="Show/hide token"><i class="fas fa-eye" id="patEyeIcon"></i></button>
+          </div>
+          <div style="font-size:.72rem;color:var(--txt3);margin-top:.35rem;font-family:var(--mono);">Stored in localStorage only. Never sent anywhere except api.github.com.</div>
+        </div>
+        <div style="border-top:1px solid var(--line);margin:.85rem 0;"></div>
         <div class="form-field">
           <label>Admin Panel Title</label>
           <input type="text" id="cfg-title" value="HVM License Admin" />
-        </div>
-        <div class="form-field">
-          <label>License Server URL</label>
-          <input type="text" id="cfg-url" value="https://aashirwadgamingxd.github.io/Aashirwadgamingxd" />
         </div>
         <div class="form-field">
           <label>Default Expiry (days)</label>
@@ -721,6 +816,9 @@
         </div>
         <button class="btn-create" style="width:100%;padding:.75rem;margin-top:.5rem;" onclick="saveSettings()">
           <i class="fas fa-save"></i>&nbsp; Save Settings
+        </button>
+        <button onclick="testGitHub()" class="tb-btn" style="width:100%;justify-content:center;margin-top:.5rem;padding:.65rem;">
+          <i class="fas fa-plug"></i>&nbsp; Test GitHub Connection
         </button>
       </div>
     </div>
@@ -888,32 +986,120 @@ function filterTable() {
   ));
 }
 
-/* ─── ISSUE LICENCE ────────────────────────────────────────── */
-function issueLicence() {
+/* ─── KEY HASH (mirrors Python: sha256(key)[:32]) ─────────── */
+async function keyHash(licKey) {
+  const enc = new TextEncoder().encode(licKey);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,32);
+}
+
+/* ─── GEN RANDOM KEY ─────────────────────────────────────── */
+function genKey() {
+  const seg = () => Math.random().toString(36).slice(2,6).toUpperCase();
+  document.getElementById('i-key').value = `HVM-${seg()}-${seg()}-${seg()}-${new Date().getFullYear()}`;
+}
+
+/* ─── STORED ENVELOPE DATA ───────────────────────────────── */
+let _lastEnvelope = null;
+let _lastFilename = '';
+
+/* ─── ISSUE LICENCE ──────────────────────────────────────── */
+async function issueLicence() {
+  const licKey = (document.getElementById('i-key').value || '').trim();
   const owner  = document.getElementById('i-owner').value.trim();
   const expiry = document.getElementById('i-expiry').value;
-  if (!owner || !expiry) { showToast('Fill in Owner and Expiry Date', 'error'); return; }
+  if (!licKey) { showToast('Enter or generate a licence key', 'error'); return; }
+  if (!owner)  { showToast('Owner name is required', 'error'); return; }
+  if (!expiry) { showToast('Expiry date is required', 'error'); return; }
 
-  // generate a demo key
-  const seg = () => Math.random().toString(36).slice(2,6).toUpperCase();
-  const newKey = `HVM-${seg()}-${seg()}-${seg()}-2026`;
+  const expiryTs = Math.floor(new Date(expiry + 'T23:59:59Z').getTime() / 1000);
+  const nowTs    = Math.floor(Date.now() / 1000);
 
-  document.getElementById('keyText').textContent = newKey;
-  document.getElementById('newKeyDisplay').style.display = 'block';
-  showToast('Licence signed and issued ✓', 'success');
+  // Build envelope data (matches what license_client.py expects)
+  const envelopeData = {
+    status:          'active',
+    license_key:     licKey,
+    machine_id:      null,           // null = any machine allowed on first activate
+    owner:           owner,
+    email:           document.getElementById('i-email').value.trim(),
+    usage_type:      document.getElementById('i-type').value,
+    max_activations: parseInt(document.getElementById('i-max').value) || 1,
+    expires_at:      expiry,
+    expires_ts:      expiryTs,
+    issued_at:       new Date().toISOString().slice(0,10),
+    notes:           document.getElementById('i-notes').value.trim(),
+    ts:              nowTs,
+    message:         'License is active',
+  };
 
-  // add to local list
+  // NOTE: Real Ed25519 signing requires the private key (server-side only).
+  // This panel generates the envelope structure with a PLACEHOLDER signature.
+  // To get a REAL signature you must run on your machine:
+  //   python license_server.py sign-envelope --key private.pem --data envelope.json
+  // Then replace the "signature" field in the downloaded JSON.
+  const canonical = JSON.stringify({data: envelopeData, ts: nowTs}, Object.keys({data: envelopeData, ts: nowTs}).sort());
+  const placeholderSig = btoa('SIGN_WITH_PRIVATE_KEY_SEE_README_' + licKey.slice(0,8));
+
+  _lastEnvelope = {
+    alg:       'ed25519',
+    envelope:  { data: envelopeData, ts: nowTs },
+    signature: placeholderSig,
+  };
+
+  const hash = await keyHash(licKey);
+  _lastFilename = hash + '.json';
+  const repoPath = `licenses/${_lastFilename}`;
+
+  // Show output
+  document.getElementById('outKey').textContent  = licKey;
+  document.getElementById('outPath').textContent = repoPath;
+  document.getElementById('outputEmpty').style.display  = 'none';
+  document.getElementById('outputFilled').style.display = 'block';
+
+  // Email template
+  const emailBox = document.getElementById('emailBox');
+  emailBox.style.display = 'block';
+  document.getElementById('emailPreview').value =
+`Hi ${owner},
+
+Your HVM Panel licence key is ready:
+
+  ${licKey}
+
+Enter this key on the activation screen of your HVM Panel.
+
+Licence type:    ${envelopeData.usage_type}
+Max activations: ${envelopeData.max_activations === 99 ? 'Unlimited' : envelopeData.max_activations}
+Valid until:     ${expiry}
+
+Regards,
+Aashirwad Gaming`;
+
+  // Add to local table
   LICENCES.unshift({
-    key: newKey, owner, email: document.getElementById('i-email').value,
+    key: licKey, owner, email: document.getElementById('i-email').value,
     type: document.getElementById('i-type').value,
     max: parseInt(document.getElementById('i-max').value) || 1,
-    status: 'pending', issued: new Date().toISOString().slice(0,10),
+    status: 'active', issued: new Date().toISOString().slice(0,10),
     expires: expiry, machine: '—', lastSeen: 'Never'
   });
+
+  showToast('Licence envelope generated — download & commit to GitHub ✓', 'success');
+}
+
+/* ─── DOWNLOAD JSON ──────────────────────────────────────── */
+function downloadJSON() {
+  if (!_lastEnvelope) return;
+  const blob = new Blob([JSON.stringify(_lastEnvelope, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = _lastFilename;
+  a.click();
+  showToast(`Downloaded ${_lastFilename} — commit it to licenses/ in your repo`, 'success');
 }
 
 function copyKey() {
-  copyText(document.getElementById('keyText').textContent);
+  copyText(document.getElementById('outKey').textContent);
 }
 
 /* ─── REVOKE / EXTEND ──────────────────────────────────────── */
@@ -977,8 +1163,151 @@ function copyText(txt) {
   navigator.clipboard.writeText(txt).then(() => showToast('Copied to clipboard', 'success'));
 }
 
-/* ─── SETTINGS SAVE ────────────────────────────────────────── */
-function saveSettings() { showToast('Settings saved ✓', 'success'); }
+/* ─── SETTINGS HELPERS ─────────────────────────────────────── */
+function togglePAT() {
+  const inp = document.getElementById('cfg-pat');
+  const ico = document.getElementById('patEyeIcon');
+  if (inp.type === 'password') { inp.type = 'text'; ico.className = 'fas fa-eye-slash'; }
+  else { inp.type = 'password'; ico.className = 'fas fa-eye'; }
+}
+
+function saveSettings() {
+  const pat  = document.getElementById('cfg-pat').value.trim();
+  const repo = document.getElementById('cfg-repo').value.trim();
+  const branch = document.getElementById('cfg-branch').value.trim();
+  if (pat)    localStorage.setItem('hvm_gh_pat',    pat);
+  if (repo)   localStorage.setItem('hvm_gh_repo',   repo);
+  if (branch) localStorage.setItem('hvm_gh_branch', branch);
+  showToast('Settings saved ✓', 'success');
+}
+
+function loadSettings() {
+  const pat    = localStorage.getItem('hvm_gh_pat');
+  const repo   = localStorage.getItem('hvm_gh_repo');
+  const branch = localStorage.getItem('hvm_gh_branch');
+  if (pat)    document.getElementById('cfg-pat').value    = pat;
+  if (repo)   document.getElementById('cfg-repo').value   = repo;
+  if (branch) document.getElementById('cfg-branch').value = branch;
+}
+
+function getGHConfig() {
+  return {
+    pat:    (document.getElementById('cfg-pat').value    || localStorage.getItem('hvm_gh_pat')    || '').trim(),
+    repo:   (document.getElementById('cfg-repo').value   || localStorage.getItem('hvm_gh_repo')   || 'AASHIRWADGAMINGXD/Aashirwadgamingxd').trim(),
+    branch: (document.getElementById('cfg-branch').value || localStorage.getItem('hvm_gh_branch') || 'main').trim(),
+  };
+}
+
+/* ─── GITHUB API ─────────────────────────────────────────── */
+async function ghRequest(method, path, body, pat) {
+  const res = await fetch(`https://api.github.com${path}`, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${pat}`,
+      'Accept':        'application/vnd.github+json',
+      'Content-Type':  'application/json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data: json };
+}
+
+async function testGitHub() {
+  const { pat, repo } = getGHConfig();
+  if (!pat) { showToast('Paste your PAT in the token field first', 'error'); return; }
+  showToast('Testing connection…', 'success');
+  const r = await ghRequest('GET', `/repos/${repo}`, null, pat);
+  if (r.ok) {
+    showToast(`Connected to ${r.data.full_name} ✓`, 'success');
+  } else if (r.status === 401) {
+    showToast('Token invalid or expired — generate a new PAT', 'error');
+  } else if (r.status === 404) {
+    showToast('Repo not found — check repo name in settings', 'error');
+  } else {
+    showToast(`GitHub error ${r.status}: ${r.data.message || 'unknown'}`, 'error');
+  }
+}
+
+/* ─── PUSH TO GITHUB ─────────────────────────────────────── */
+async function pushToGitHub() {
+  if (!_lastEnvelope || !_lastFilename) {
+    showToast('Generate a licence first', 'error'); return;
+  }
+  const { pat, repo, branch } = getGHConfig();
+  if (!pat) {
+    showToast('No GitHub token — go to Settings and paste your PAT', 'error');
+    goto('settings'); return;
+  }
+
+  const btn = document.getElementById('pushBtn');
+  const statusBox = document.getElementById('pushStatus');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Pushing…';
+  statusBox.style.display = 'none';
+
+  const filePath = `licenses/${_lastFilename}`;
+  const apiPath  = `/repos/${repo}/contents/${filePath}`;
+  const content  = btoa(unescape(encodeURIComponent(JSON.stringify(_lastEnvelope, null, 2))));
+  const licKey   = document.getElementById('outKey').textContent;
+  const owner    = document.getElementById('i-owner').value.trim();
+
+  // Check if file already exists (need SHA for update)
+  let sha = undefined;
+  const existing = await ghRequest('GET', `${apiPath}?ref=${branch}`, null, pat);
+  if (existing.ok) sha = existing.data.sha;
+
+  const body = {
+    message: `licence: issue ${_lastFilename.slice(0,12)} for ${owner}`,
+    content,
+    branch,
+  };
+  if (sha) body.sha = sha;  // required for update
+
+  const r = await ghRequest('PUT', apiPath, body, pat);
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fab fa-github"></i>&nbsp; Push to GitHub';
+
+  if (r.ok) {
+    const action = sha ? 'updated' : 'created';
+    const url = `https://github.com/${repo}/blob/${branch}/${filePath}`;
+    statusBox.style.display = 'block';
+    statusBox.style.background = 'rgba(0,245,196,.07)';
+    statusBox.style.border = '1px solid rgba(0,245,196,.25)';
+    statusBox.style.color = 'var(--txt)';
+    statusBox.innerHTML = `
+      <i class="fas fa-circle-check" style="color:var(--accent);margin-right:.4rem;"></i>
+      File <b>${action}</b> on GitHub &mdash;
+      <a href="${url}" target="_blank" style="color:var(--accent);text-decoration:none;">view on GitHub <i class="fas fa-arrow-up-right-from-square" style="font-size:.7rem;"></i></a><br>
+      <span style="font-size:.72rem;color:var(--txt2);font-family:var(--mono);margin-top:.3rem;display:block;">
+        ${repo} / ${filePath}
+      </span>`;
+    showToast('Pushed to GitHub ✓ — client can activate now', 'success');
+  } else if (r.status === 401) {
+    showStatus('error', 'Token rejected by GitHub. Revoke it and create a new PAT with <b>Contents: Read & Write</b> permission.');
+    showToast('Token invalid', 'error');
+  } else if (r.status === 404) {
+    showStatus('error', `Repo or branch not found. Check <b>Settings</b>: repo = <code>${repo}</code>, branch = <code>${branch}</code>`);
+  } else if (r.status === 422) {
+    showStatus('error', 'Validation error — the file may already exist with a different SHA. Try refreshing.');
+  } else {
+    showStatus('error', `GitHub error ${r.status}: ${r.data.message || 'unknown error'}`);
+    showToast(`Push failed: ${r.data.message || r.status}`, 'error');
+  }
+}
+
+function showStatus(type, msg) {
+  const box = document.getElementById('pushStatus');
+  box.style.display = 'block';
+  if (type === 'error') {
+    box.style.background = 'rgba(255,69,69,.08)';
+    box.style.border = '1px solid rgba(255,69,69,.25)';
+    box.style.color = 'var(--txt)';
+    box.innerHTML = `<i class="fas fa-triangle-exclamation" style="color:var(--danger);margin-right:.4rem;"></i>${msg}`;
+  }
+}
 
 /* ─── REFRESH ──────────────────────────────────────────────── */
 function refreshData() {
@@ -990,9 +1319,13 @@ function refreshData() {
 
 /* ─── INIT ─────────────────────────────────────────────────── */
 (function init() {
-  // set default expiry to +1 year
+  // default expiry +1 year
   const d = new Date(); d.setFullYear(d.getFullYear()+1);
   document.getElementById('i-expiry').value = d.toISOString().slice(0,10);
+  // auto-generate a key ready to use
+  genKey();
+  // restore saved GitHub settings
+  loadSettings();
   populateDash();
   populateLicTable();
   populateAudit();
