@@ -2,21 +2,21 @@
   "alg": "ed25519",
   "envelope": {
     "data": {
-      "status": "active",
-      "license_key": "HVM-Z2SL-PSFH-195Q-2026",
-      "machine_id": null,
-      "owner": "Admin",
-      "email": "admin",
-      "usage_type": "single",
-      "max_activations": 1,
-      "expires_at": "2027-05-15",
-      "expires_ts": 1810425599,
+      "expires_at": "2027-12-31",
+      "expires_ts": 1861862400,
       "issued_at": "2026-05-15",
+      "license_key": "HVM-TEST-AASHIRWAD-2026",
+      "machine_id": null,
+      "max_activations": 99,
+      "message": "License is active",
       "notes": "",
-      "ts": 1778808581,
-      "message": "License is active"
+      "owner": "Aashirwad Gaming",
+      "email": "",
+      "status": "active",
+      "usage_type": "unlimited",
+      "ts": 1778807614
     },
-    "ts": 1778808581
+    "ts": 1778807614
   },
-  "signature": "EssFjo/PaestqvLt4mXhWQjMlvoTgwZjhm1ZKu7SoiGeSLOlifLb5iQouvUJE5vDkVcBppmIJJKnqQWPh2MBBQ=="
+  "signature": "5ZvaozTYGAKSrzTcNEVZTBYjjZv3Hj1+Uc+0Gt/58OOtrhol/WywTwq1yeCroobZvWS9Dyx3d8lfvdC65WKFDA=="
 }
