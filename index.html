@@ -1032,19 +1032,31 @@ async function issueLicence() {
     message:         'License is active',
   };
 
-  // NOTE: Real Ed25519 signing requires the private key (server-side only).
-  // This panel generates the envelope structure with a PLACEHOLDER signature.
-  // To get a REAL signature you must run on your machine:
-  //   python license_server.py sign-envelope --key private.pem --data envelope.json
-  // Then replace the "signature" field in the downloaded JSON.
-  const canonical = JSON.stringify({data: envelopeData, ts: nowTs}, Object.keys({data: envelopeData, ts: nowTs}).sort());
-  const placeholderSig = btoa('SIGN_WITH_PRIVATE_KEY_SEE_README_' + licKey.slice(0,8));
-
-  _lastEnvelope = {
-    alg:       'ed25519',
-    envelope:  { data: envelopeData, ts: nowTs },
-    signature: placeholderSig,
-  };
+  // Real Ed25519 signing using the embedded private key via WebCrypto
+  const PRIV_KEY_B64 = "MC4CAQAwBQYDK2VwBCIEIPTkEzbABmELv4JeaiwjRpEeoxYjpU8HDSmjul5+8kxT";
+  
+  let signature;
+  try {
+    const privDer = Uint8Array.from(atob(PRIV_KEY_B64), c => c.charCodeAt(0));
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8', privDer.buffer,
+      { name: 'Ed25519' }, false, ['sign']
+    );
+    const envelope  = { data: envelopeData, ts: nowTs };
+    // Must exactly match Python: json.dumps(envelope, sort_keys=True, separators=(",",":"))
+    function canonicalJSON(obj) {
+      if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return JSON.stringify(obj);
+      return '{' + Object.keys(obj).sort().map(k => JSON.stringify(k) + ':' + canonicalJSON(obj[k])).join(',') + '}';
+    }
+    const sigBuf = await crypto.subtle.sign('Ed25519', cryptoKey, new TextEncoder().encode(canonicalJSON(envelope)));
+    signature = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
+    _lastEnvelope = { alg: 'ed25519', envelope, signature };
+  } catch(e) {
+    // WebCrypto Ed25519 not supported in this browser — use pre-signed envelope
+    console.warn('Ed25519 WebCrypto sign failed:', e);
+    showToast('Browser does not support Ed25519 signing — use Chrome 113+ or Firefox 119+', 'error');
+    return;
+  }
 
   const hash = await keyHash(licKey);
   _lastFilename = hash + '.json';
