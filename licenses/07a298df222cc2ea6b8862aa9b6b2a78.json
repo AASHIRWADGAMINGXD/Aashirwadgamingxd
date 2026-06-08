@@ -1,0 +1,22 @@
+{
+  "alg": "ed25519",
+  "envelope": {
+    "data": {
+      "status": "active",
+      "license_key": "HVM-SJD6-5FZQ-UWEU-2026",
+      "machine_id": null,
+      "owner": "Anime",
+      "email": "",
+      "usage_type": "single",
+      "max_activations": 1,
+      "expires_at": "2027-06-08",
+      "expires_ts": 1812499199,
+      "issued_at": "2026-06-08",
+      "notes": "",
+      "ts": 1780915270,
+      "message": "License is active"
+    },
+    "ts": 1780915270
+  },
+  "signature": "vh7sksHgvxvLJbayABgDylPVZKS8ao8MpZAgROobmwyoDyNWZBujZwISlvEQOjDbAdwY0MxN4qplhIhUG9cWBA=="
+}
