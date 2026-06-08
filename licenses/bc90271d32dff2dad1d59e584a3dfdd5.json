@@ -2,7 +2,7 @@
   "alg": "ed25519",
   "envelope": {
     "data": {
-      "status": "active",
+      "status": "expired",
       "license_key": "HVM-U906-2ETJ-1YV0-2026",
       "machine_id": null,
       "owner": "Copy",
