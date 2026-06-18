@@ -1,0 +1,22 @@
+{
+  "alg": "ed25519",
+  "envelope": {
+    "data": {
+      "status": "active",
+      "license_key": "HVM-VLZN-3ICV-V3BI-2026",
+      "machine_id": null,
+      "owner": "Code",
+      "email": "admin",
+      "usage_type": "single",
+      "max_activations": 1,
+      "expires_at": "2027-06-18",
+      "expires_ts": 1813363199,
+      "issued_at": "2026-06-18",
+      "notes": "",
+      "ts": 1781796652,
+      "message": "License is active"
+    },
+    "ts": 1781796652
+  },
+  "signature": "cnWxztYdP6gRspYSajA/JKySS55O6LMmyYGVtP/y+fOSBcl2gEj4JJBmra6i65yuvxvtTAR7Sj2vKLIT2U5uAg=="
+}
