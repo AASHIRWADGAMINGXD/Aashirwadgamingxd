@@ -1,0 +1,22 @@
+{
+  "alg": "ed25519",
+  "envelope": {
+    "data": {
+      "status": "active",
+      "license_key": "HVM-86JB-MY27-MAJ6-2026",
+      "machine_id": null,
+      "owner": "Admin",
+      "email": "admin@gmail.com",
+      "usage_type": "single",
+      "max_activations": 1,
+      "expires_at": "2027-07-14",
+      "expires_ts": 1815609599,
+      "issued_at": "2026-07-14",
+      "notes": "",
+      "ts": 1783999475,
+      "message": "License is active"
+    },
+    "ts": 1783999475
+  },
+  "signature": "1AP7yKhrwB2UDk0DbejAEdVHBQrH7VC1/k6LErdKw0rvFPvI1vbMlg8HUe837ACAOp5tDtj+2jXgUf2NjoYvAA=="
+}
