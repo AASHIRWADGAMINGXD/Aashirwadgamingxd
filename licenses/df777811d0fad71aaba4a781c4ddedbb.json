@@ -1,0 +1,22 @@
+{
+  "alg": "ed25519",
+  "envelope": {
+    "data": {
+      "status": "active",
+      "license_key": "HVM-ZBR6-PRA3-1HVA-2026",
+      "machine_id": null,
+      "owner": "Qdmin",
+      "email": "admin@gmail.com",
+      "usage_type": "single",
+      "max_activations": 1,
+      "expires_at": "2027-08-27",
+      "expires_ts": 1819411199,
+      "issued_at": "2026-08-27",
+      "notes": "",
+      "ts": 1787792094,
+      "message": "License is active"
+    },
+    "ts": 1787792094
+  },
+  "signature": "zxVzlXd68flu+V1D26uAOgGN0L/EWP9bZyQZzsrU87/kawQXOTsi0LvY6UvP/I98ax+GQMUWCgxBZfvPT08FBg=="
+}
